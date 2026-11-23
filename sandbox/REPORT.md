@@ -45,3 +45,14 @@ The open item above is closed. `tests/test_published.py`:
   within 2 % or the last printed digit (stand B crowning index 30.5 against 30). Fire type: passive and active, as printed.
 - Andrews 2012 Table 5: unsheltered wind adjustment 0.36, 0.44, 0.55, 0.28 for bed depths 1, 2.5, 6, 0.2 ft, as printed.
 Flag: the crown fraction burned rule reproduces the table but the text of RP-29 equation 28 has not been read.
+
+## Synthetic landscapes, first attempt (23 Nov 2026): one solver bug found
+
+| finding | what happened | what was done |
+|---|---|---|
+| F4 | On the first patchy landscapes fire appeared on the far side of a 30 m firebreak with nothing burning between, at 10 m and 15 m cells but not at 5 m or 30 m (burned area differed by up to 3.9x between cell sizes). Cause: the upwinding checked only the corner states for a change of characteristic direction, so a cell cut off behind a firebreak could keep lowering its own value and cross zero by itself. S3 (strip with a gap) had not caught it. | A minimum principle in the time step: a cell cannot fall below its lowest burnable neighbour (corner contact between two firebreak cells does not count), and never rises. S1-S5 unchanged. On the landscape that showed it, areas are now 21.9, 21.5, 20.9, 19.7 ha at 5, 10, 15, 30 m. |
+
+Also changed after that first look, before the scored run: the landscape generator. It cut one smooth field into bands,
+which wrapped every patch in a closed ring of the next class, so fires stayed in one patch and the non-burnable class
+formed rings. Patches are now irregular cells about 250 m across with independent fuels. The Y3-Y5 rules in CASES.md are
+unchanged. The first attempt's partial numbers (4 of 12 landscapes) are not used.

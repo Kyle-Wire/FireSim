@@ -21,10 +21,14 @@ def landscape(seed, size_m=4000.0, block_m=30.0, relief_m=150.0):
     """Returns dict on the 30 m block grid: fuel number, elevation, canopy layers."""
     rng = np.random.default_rng(seed)
     n = int(round(size_m / block_m))
-    f = _smooth(rng, n, 12.0)
-    q = np.quantile(f, np.linspace(0, 1, len(FUELS_USED) + 1)[1:-1])
-    order = rng.permutation(len(FUELS_USED))
-    fuel = np.array(FUELS_USED)[order][np.digitize(f, q)]
+    # patches: each 30 m block takes the fuel of its nearest seed point (irregular cells about 250 m across), so any
+    # fuel can border any other. (A first version cut one smooth field into bands, which wrapped every patch in a
+    # closed ring of the next class, the non-burnable one included; sandbox note under Y3.)
+    k = max(8, int((size_m / 250.0) ** 2))
+    sy = rng.uniform(0, n, k); sx = rng.uniform(0, n, k); cls = rng.integers(0, len(FUELS_USED), k)
+    yy, xx = np.mgrid[:n, :n]
+    near = np.argmin((yy[..., None] - sy) ** 2 + (xx[..., None] - sx) ** 2, axis=-1)
+    fuel = np.array(FUELS_USED)[cls][near]
     z = _smooth(rng, n, 40.0); z = (z - z.min()) / (z.max() - z.min()) * relief_m
     cc = np.zeros((n, n)); ch = np.zeros((n, n)); cbh = np.zeros((n, n)); cbd = np.zeros((n, n))
     for num, (a, b, c, d) in CANOPY.items():

@@ -106,7 +106,36 @@ def _heun(phi, tmp, k1, k2, a, b, c, hx, hy, cell, dt, t, arr, rate):
     for y in prange(ny):
         for x in range(nx):
             old = phi[y, x]
+            if a[y, x] <= 0.0:
+                continue
             new = old + 0.5 * dt * (k1[y, x] + k2[y, x])
+            if new > old:
+                new = old                      # fire only advances: phi never rises
+            if old > 0.0:
+                # Minimum principle: within one step (CFL < 1) fire can only come from a neighbouring cell, so phi cannot
+                # fall below the lowest burnable neighbour. Without this a cell cut off behind a firebreak can dig its own
+                # minimum and "ignite" with no fire near it (sandbox finding F4).
+                lo = old
+                for dy in range(-1, 2):
+                    yy = y + dy
+                    if yy < 0 or yy >= ny:
+                        continue
+                    for dx in range(-1, 2):
+                        xx = x + dx
+                        if xx < 0 or xx >= nx or (dy == 0 and dx == 0) or a[yy, xx] <= 0.0:
+                            continue
+                        if dy != 0 and dx != 0 and a[y, xx] <= 0.0 and a[yy, x] <= 0.0:
+                            continue           # a diagonal neighbour reached only through the corner of two firebreak cells
+                        if phi[yy, xx] < lo:
+                            lo = phi[yy, xx]
+                if new < lo:
+                    new = lo
+            tmp[y, x] = new
+    for y in prange(ny):
+        for x in range(nx):
+            if a[y, x] <= 0.0:
+                continue
+            old = phi[y, x]; new = tmp[y, x]
             if old > 0.0 and new <= 0.0 and arr[y, x] == np.inf:
                 arr[y, x] = t + dt * old / (old - new)
                 rate[y, x] = (old - new) / dt
