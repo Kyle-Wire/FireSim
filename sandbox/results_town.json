@@ -5,7 +5,7 @@
  "lost_p10": 15.0,
  "lost_p90": 96.2,
  "lost_mean_hardened": 48.225,
- "lost_no_embers_seed0": 23,
+ "lost_no_embers_seed0": 32,
  "cause_share": {
   "flame": 0.44399821508255244,
   "ember": 0.055778670236501564,
