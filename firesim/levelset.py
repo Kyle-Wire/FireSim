@@ -149,12 +149,31 @@ def ellipse_abc(rate_head, lb):
     return a, a / lb, a * e
 
 
+def _light(phi, arr, rate, R, L, r, cc, t0, rad, cell):
+    """Light a spot fire at (r, cc): phi = min(phi, distance to the spot) inside a window wide enough to hold the
+    region where the spot is nearer than the existing front (half the old phi at the spot, plus a margin)."""
+    ny, nx = phi.shape
+    if R[r, cc] <= 0 or arr[r, cc] < np.inf:
+        return
+    w = int(min(max(0.75 * phi[r, cc] / cell + 6, 6), 400))
+    y0, y1, x0, x1 = max(r - w, 0), min(r + w + 1, ny), max(cc - w, 0), min(cc + w + 1, nx)
+    yy, xx = np.mgrid[y0:y1, x0:x1]
+    d = np.hypot(yy - r, xx - cc) * cell - max(rad, 0.5 * cell)
+    sub = phi[y0:y1, x0:x1]
+    lit = (d <= 0) & (arr[y0:y1, x0:x1] == np.inf) & (R[y0:y1, x0:x1] > 0)
+    arr[y0:y1, x0:x1][lit] = t0
+    a0 = R[y0:y1, x0:x1] / (1 + np.sqrt(np.maximum(L[y0:y1, x0:x1] ** 2 - 1, 0)) / L[y0:y1, x0:x1])
+    rate[y0:y1, x0:x1][lit] = a0[lit]
+    np.minimum(sub, d, out=sub)
+
+
 def arrival(rate_head, heading, lb, cell, ignitions, t_end, step_min=60.0, cfl=0.4, phi0=None, spot=None):
     """Arrival time (minutes) per cell up to t_end.
 
     rate_head (m/min), heading (rad), lb: (ny, nx) or (T, ny, nx), one slice per `step_min`.
-    ignitions: list of (row, col, minute, radius_m). spot: optional callback(t0, t1, arr, phi) run after each step,
-    which may lower phi to light new cells (embers).
+    ignitions: list of (row, col, minute, radius_m). spot: optional callback(t0, t1, arr, phi) run after each step
+    (embers, structures). It may return new ignitions (row, col, minute, radius_m); these are applied inside a local
+    window (see `_light`) so that thousands of spot fires stay cheap.
     """
     R = np.asarray(rate_head, np.float64)
     R3 = R[None] if R.ndim == 2 else R
@@ -171,11 +190,16 @@ def arrival(rate_head, heading, lb, cell, ignitions, t_end, step_min=60.0, cfl=0
     s_now = -1
     while t < t_end:
         while pending and pending[0][2] <= t + 1e-12:
-            r, cc, t0, rad = pending.pop(0)
+            g = pending.pop(0)
+            r, cc, t0, rad = g[:4]
+            s0 = min(int(t0 // step_min), T - 1)
+            if len(g) > 4:                                    # spot ignition: local window
+                _light(phi, arr, rate, R3[s0], L3[s0], int(r), int(cc), t0, rad, cell)
+                continue
             d = np.hypot(yy - r, xx - cc) * cell - max(rad, 0.5 * cell)
             lit = (d <= 0) & (arr == np.inf)
             arr[lit] = t0
-            a0 = ellipse_abc(R3[min(int(t0 // step_min), T - 1)], L3[min(int(t0 // step_min), T - 1)])[0]
+            a0 = ellipse_abc(R3[s0], L3[s0])[0]
             rate[lit] = a0[lit]
             phi = np.minimum(phi, d)
         s = min(int(t // step_min), T - 1)
@@ -196,6 +220,9 @@ def arrival(rate_head, heading, lb, cell, ignitions, t_end, step_min=60.0, cfl=0
         dt = min(dt, max(nxt - t, 1e-9))
         _heun(phi, tmp, k1, k2, a, b, c, hx, hy, float(cell), dt, t, arr, rate)
         if spot is not None:
-            spot(t, t + dt, arr, phi)
+            new = spot(t, t + dt, arr, phi)
+            if new:
+                pending.extend((r, cc, max(t0, t + dt), rad, True) for r, cc, t0, rad in new)
+                pending.sort(key=lambda g: g[2])
         t += dt
     return arr, phi

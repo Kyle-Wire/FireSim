@@ -13,6 +13,19 @@ reported as results in `sandbox/REPORT.md`.
 | S6 spotting off = S1 | spotting switched on with ember count 0 | bit-identical to S1 | exact |
 | S7 ember jump | S3 with no gap (full strip), embers on with a fixed 100 m throw downwind and ignition probability 1 | fire crosses the strip only by embers; first arrival behind the strip = arrival at the launch cell + stated flight delay | strip never burns; crossing time within one ember time step |
 
+## Embers and houses (answers and rules fixed 23 Nov 2026, before `firesim/embers.py` and `firesim/structures.py` ran)
+
+S6 and S7 above are the ember cases. Houses are points with a footprint area; they do not burn by the level set.
+
+| case | scene | expected answer | pass rule |
+|---|---|---|---|
+| S8 no houses = S1 | S1 with the house layer on and zero houses, embers on with count 0 | bit-identical to S1 | exact |
+| S9 house chain | 20 houses in a row on non-burnable ground, 10 m edge to edge, house 0 lit at t = 0; neighbour ignition set certain inside 15 m and impossible beyond, delay 5 min, no embers | house n lights at 5 n min; a second row 60 m away never lights | exact times; second row all unlit |
+| S10 neighbour odds | 4,000 separate pairs of houses 12 m edge to edge, one of each pair lit, k_s = 1.5, d_s = 10 m | fraction of second houses lit = 1 - exp(-k_s exp(-12/10)) = 0.3635 | within 3 binomial standard errors (0.0228) |
+| S11 flame reach | S1 fuel with a line of 30 houses at 100 m spacing set in a 20 m non-burnable ring, so no house touches flame; flame hazard on (k_f, d_f), embers off | every house has the same chance p = 1 - exp(-k_f E), E summed by the code over the burning cells within reach; the chance printed by the code for one house, checked against 400 runs | lit fraction over 30 houses x 400 seeds within 3 standard errors of p; with k_f = 0 no house lights |
+| S12 hardening | a 12 x 12 block of houses 8 m apart downwind of an S2 fire with embers on; all houses at ember factor 1.0, then all at 0.5 (same 200 seeds) | fewer houses lost with the factor at 0.5 | mean houses lost lower at 0.5; with factor 0 and flame and neighbour hazards off, none lost |
+| S13 spot window | S7 scene with a random ember throw, 10 seeds, spot fires lit by the local window and by the whole-grid rule | the same fire | burned area within 1 % and arrival at 200 points within 2 % (median), per seed |
+
 ## Synthetic landscapes (answers and rules fixed 23 Nov 2026, before these ran)
 
 Kyle asked for synthetic simulations "to see how it holds up". Moisture D2L2 (6, 7, 8, 60, 90 %) unless stated.
