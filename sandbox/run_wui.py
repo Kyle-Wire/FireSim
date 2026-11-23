@@ -44,8 +44,8 @@ def s7():
     delay = 2.0
     sp = Spot(cell, 5000.0, 8.0, 0.0, R > 0, fixed=(100.0, delay))
     steps = []
-    def cb(t0, t1, arr, phi):
-        steps.append(t1 - t0); return sp(t0, t1, arr, phi)
+    def cb(t0, t1, arr, phi, r, c):
+        steps.append(t1 - t0); return sp(t0, t1, arr, phi, r, c)
     a, _ = arrival(R, 0.0, 1.0, cell, [(cy, cx, 0, 0)], 120.0, spot=cb)
     strip = bool(np.isfinite(a[:, x0:x1]).any())
     j = np.unravel_index(np.argmin(a[:, x1:]), a[:, x1:].shape)
@@ -137,14 +137,14 @@ def s13b():
     for seed in range(10):
         sp = Spot(cell, 5000.0, 8.0, 0.0, R > 0, seed=seed, gen=2e-4, d_med=150.0)
         rec = []
-        def record(t0, t1, arr, phi):
-            new = sp(t0, t1, arr, phi) or []
+        def record(t0, t1, arr, phi, r, c):
+            new = sp(t0, t1, arr, phi, r, c) or []
             rec.extend((r, c, max(t, t1), rad) for r, c, t, rad in new); return new
         arrival(R, 0.0, 2.0, cell, [(cy, cx, 0, 0)], 70.0, spot=record)
         o = []
         for win in (True, False):
             todo = sorted(rec, key=lambda g: g[2])
-            def replay(t0, t1, arr, phi):
+            def replay(t0, t1, arr, phi, r, c):
                 new = []
                 while todo and todo[0][2] <= t1 + 1e-9:
                     new.append(todo.pop(0))

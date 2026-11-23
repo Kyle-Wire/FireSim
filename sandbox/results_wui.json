@@ -1,0 +1,78 @@
+{
+ "S6": {
+  "identical": true,
+  "ok": true
+ },
+ "S7": {
+  "strip_burned": false,
+  "first_behind": 8.800000000000002,
+  "launch_plus_delay": 8.744020305604852,
+  "err_min": 0.05597969439515005,
+  "step_min": 1.0,
+  "ok": true
+ },
+ "S8": {
+  "identical": true,
+  "ok": true
+ },
+ "S9": {
+  "times": [
+   0.0,
+   5.0,
+   10.0,
+   15.0,
+   20.0,
+   25.0,
+   30.0,
+   35.0,
+   40.0,
+   45.0,
+   50.0,
+   55.0,
+   60.0,
+   65.0,
+   70.0,
+   75.0,
+   80.0,
+   85.0,
+   90.0,
+   95.0
+  ],
+  "second_row_lit": 0,
+  "ok": true
+ },
+ "S10": {
+  "fraction": 0.34425,
+  "expected": 0.3635130206732471,
+  "tol": 0.02281634140407006,
+  "ok": true
+ },
+ "S11": {
+  "p_code_house0": 0.20695721109775278,
+  "p_code_min": 0.20695721109775278,
+  "p_code_max": 0.2069572110977529,
+  "fraction": 0.20808333333333334,
+  "tol": 0.011094793504355759,
+  "lit_with_kf0": 0,
+  "ok": true
+ },
+ "S12": {
+  "mean_lost_1": 134.845,
+  "mean_lost_half": 130.59,
+  "lost_factor0": 0,
+  "houses": 144,
+  "ok": true
+ },
+ "S13": {
+  "area_diff_max": 0.07949790794979084,
+  "arrival_diff_median_max": 0.000977360920160153,
+  "spots_min": 17,
+  "ok": false
+ },
+ "S13b": {
+  "area_diff_max": 0.0,
+  "arrival_diff_median_max": 3.001014569736782e-06,
+  "spots_min": 17,
+  "ok": true
+ }
+}

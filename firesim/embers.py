@@ -45,7 +45,6 @@ class Spot:
         f3 = lambda v: np.broadcast_to(np.asarray(v, np.float64), (1,) + sh) if np.ndim(v) < 3 else np.asarray(v, np.float64)
         self.fli, self.wind, self.wdir = f3(fli), f3(wind), f3(wind_to)
         self.rng = np.random.default_rng(seed)
-        self.seen = np.zeros(sh, bool)
         self.Lt = np.empty(0); self.Lx = np.empty(0); self.Ly = np.empty(0)
         self.n_thrown = 0; self.n_spots = 0
         if structures is not None:
@@ -75,11 +74,8 @@ class Spot:
         self.Ly = np.concatenate([self.Ly, r * self.cell + d * np.sin(th)])
         self.n_thrown += len(rep)
 
-    def __call__(self, t0, t1, arr, phi):
+    def __call__(self, t0, t1, arr, phi, rows, cols):
         p = self.p
-        new = np.isfinite(arr) & ~self.seen
-        self.seen |= new
-        rows, cols = np.nonzero(new)
         i_mw = self._s(t0, self.fli)[rows, cols] / 1000.0
         if self.fixed is not None:
             self.emit(rows, cols, arr[rows, cols], i_mw, np.ones(len(rows), int))
