@@ -34,3 +34,14 @@ Checked against numbers printed in the fuel model report (Scott and Burgan 2005)
   15 % allowance at class edges): 61 agree. SH1 spreads at 2.5 ch/h where the guide says "very low" (under 2).
 No worked numeric example was found in either report, so there is not yet a digit-for-digit check of spread rate. Open:
 get one (BehavePlus output or the ELMFIRE verification set) before any real-fire run.
+
+## Digit checks found (23 Nov 2026, later)
+
+The open item above is closed. `tests/test_published.py`:
+- Andrews 2018 Table 17 (three fuel beds, 5 mi/h): bulk density, characteristic SAV, optimum and relative packing ratio,
+  wind factor and spread rate all match as printed (81.6, 40.2, 32.0 ft/min).
+- Scott and Reinhardt 2001 Tables 5-6 (two forest stands, 40 km/h): surface intensity, initiation intensity, surface,
+  initiation and active spread rates, crown fraction burned, final spread rate and intensity, and crowning index match
+  within 2 % or the last printed digit (stand B crowning index 30.5 against 30). Fire type: passive and active, as printed.
+- Andrews 2012 Table 5: unsheltered wind adjustment 0.36, 0.44, 0.55, 0.28 for bed depths 1, 2.5, 6, 0.2 ft, as printed.
+Flag: the crown fraction burned rule reproduces the table but the text of RP-29 equation 28 has not been read.
