@@ -154,4 +154,5 @@ def spread(fuel: Fuel, moist, wind_midflame_m_s=0.0, slope_tan=0.0, wind_limit=F
     fl = 0.45 * ib ** 0.46 if ib > 0 else 0.0                               # ft
     return dict(ros=r * FT, ir=ir * 1.05506 / FT ** 2 / 60.0, hpa=hpa * 1.05506 / FT ** 2, fli=ib * BTU_FT_S,
                 flame=fl * FT, ros_ft_min=r, ir_btu=ir, sigma=sigma, beta=beta, beta_ratio=ratio, mx_live=mx_live,
-                phi_w=phi_w, phi_s=phi_s, xi=xi, fl_ft=fl, ros_ch_h=r * 60.0 / 66.0)
+                phi_w=phi_w, phi_s=phi_s, xi=xi, fl_ft=fl, ros_ch_h=r * 60.0 / 66.0,
+                r0_ft_min=ir * xi / sink if sink > 0 else 0.0, C=C, B=B, E=E, hpa_btu=hpa)
