@@ -8,16 +8,22 @@
 | F2 | First level set: fire from a point ran late, 4 % at 400 m on 10 m cells, the lag growing with the log of distance. The field goes flat behind the front and bleeds into it. | Behind the front each cell keeps falling at the rate it crossed with. S1 then within 1.5 % at 10 m, 0.8 % at 5 m, 0.4 % at 2.5 m. |
 | F3 | Upwind gradient with the front normal computed apart: ellipses 15 to 37 % too wide. The flank's information travels downwind, which that scheme ignores. | Roe upwinding with a local Lax-Friedrichs fix. Area error now falls with cell size. |
 
-S2 as it stands (area over exact; head distance at 60 min, exact 600 m):
+## Closed cases S1 to S5 (`python sandbox/run.py <cell>`), 23 Nov 2026
 
-| cell | LB 3 | LB 6 | LB 8 | head, LB 3 |
-|---|---|---|---|---|
-| 10 m | 1.07 | 1.18 | 1.27 | 590 m |
-| 5 m | 1.04 | 1.09 | 1.15 | 595 m |
-| 2.5 m | 1.02 | 1.05 | 1.07 | 597.5 m |
+| case | 10 m cells | 5 m cells |
+|---|---|---|
+| S1 circle | PASS (max 1.0 %, mean 0.4 %) | PASS (0.5 %, 0.2 %) |
+| S2 ellipse, LB 3 | **FAIL**: head 590 of 600 m, area 6.9 % over, flank 40 of 34.3 m, back 20 of 17.7 m | **FAIL**: head 595 m and area 4.2 % over pass; flank 40 m and back 20 m still 17 % and 13 % over |
+| S3 strip with a gap | **FAIL**: strip never burns; one of five points 3.5 % late (rule 3 %) | PASS (worst 1.7 %) |
+| S4 wind shift | **FAIL**: head reaches 300 m at 31.8 min (6 % late; rule 4 %); new head 2.0 % early | PASS (3.0 % late, 1.4 % early) |
+| S5 fast to slow fuel | PASS (2.9 % late) | PASS (1.4 %) |
 
-**S2 verdict: fails the 5 % area rule at 10 m cells (7 % over at LB 3), passes at 5 m and 2.5 m.** The half-width of an LB 6
-ellipse at one hour is 50 m, five 10 m cells, so a narrow wind-driven run is drawn too wide on coarse cells. Open.
+Reading: every error shrinks as cells shrink, so the scheme is consistent but only first-order near the ignition point
+and at sharp corners. The S2 flank and back distances are 34 m and 18 m, a few cells, and the fire starts as a disc
+half a cell in radius, so those two stay over at both sizes. On 30 m fuel cells the same errors will be larger: a
+wind-driven run is drawn too wide and a few percent late. Open; candidates are a sub-cell ignition and a higher-order
+scheme. S6 and S7 wait for the ember code. Area over exact at other shapes: LB 6 1.18 (10 m), 1.09 (5 m), 1.05 (2.5 m);
+LB 8 1.27, 1.15, 1.07.
 
 ## Fire behaviour (Rothermel), 23 Nov 2026
 
