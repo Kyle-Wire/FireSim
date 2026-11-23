@@ -18,3 +18,13 @@ S2 as it stands (area over exact; head distance at 60 min, exact 600 m):
 
 **S2 verdict: fails the 5 % area rule at 10 m cells (7 % over at LB 3), passes at 5 m and 2.5 m.** The half-width of an LB 6
 ellipse at one hour is 50 m, five 10 m cells, so a narrow wind-driven run is drawn too wide on coarse cells. Open.
+
+## Fire behaviour (Rothermel), 23 Nov 2026
+
+Checked against numbers printed in the fuel model report (Scott and Burgan 2005), `tests/test_rothermel.py`:
+- Characteristic SAV and packing ratio: 39 of 40 models match the value printed on the model's page. GS4 gives 1631 1/ft
+  where the page prints 1674; the table's own loads and SAVs give 1631. Left as is.
+- Adjective class for spread rate and flame length at D2L2, 5 mi/h, flat (31 models with a class sentence, 62 checks,
+  15 % allowance at class edges): 61 agree. SH1 spreads at 2.5 ch/h where the guide says "very low" (under 2).
+No worked numeric example was found in either report, so there is not yet a digit-for-digit check of spread rate. Open:
+get one (BehavePlus output or the ELMFIRE verification set) before any real-fire run.
