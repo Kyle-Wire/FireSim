@@ -28,7 +28,7 @@ ign = [(r, 3, 0, 0) for r in range(150, 250)]
 
 
 def run(seed, s_ember=1.0, embers=True):
-    st = Structures(hx, hy, area, cell, seed=seed, s_ember=s_ember)
+    st = Structures(hx, hy, area, cell, seed=seed, s_ember=s_ember, **({} if embers else dict(brands=0.0)))
     sp = Spot(cell, F["fli"], wind, 0.0, F["rate"] > 0, seed=seed, structures=st, **({} if embers else dict(gen=0.0)))
     a, _ = arrival(F["rate"], F["heading"], F["lb"], cell, ign, T, spot=sp)
     return a, st, sp
@@ -49,7 +49,7 @@ json.dump(res, open(os.path.join(os.path.dirname(__file__), "results_town.json")
 ext = [0, n * cell / 1000, 0, n * cell / 1000]
 fig, ax = plt.subplots(1, 3, figsize=(17, 5.8), dpi=150)
 bands = dict(levels=[0, 30, 60, 90, 120, 150], colors=["#7a1f12", "#b53a1a", "#dd6b24", "#f0a544", "#f9d98a"])
-for k, (a, st, ttl) in enumerate(((a_no, st_no, "Embers off: fire stops at the edge of town"), (a0, st0, "Embers on, one run: fire jumps in and houses pass it on"))):
+for k, (a, st, ttl) in enumerate(((a_no, st_no, "Embers off: houses at the edge light, then their neighbours"), (a0, st0, "Embers on, one run: spot fires ahead of the front"))):
     ax[k].imshow(np.where(F["rate"] > 0, 0.93, 0.8), cmap="gray", vmin=0, vmax=1, extent=ext, origin="lower")
     cf = ax[k].contourf(np.where(np.isfinite(a), a, np.nan), extent=ext, origin="lower", **bands)
     u = ~np.isfinite(st.t_ign)
