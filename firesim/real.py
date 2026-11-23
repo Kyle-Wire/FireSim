@@ -93,12 +93,51 @@ class Fire:
             m = wx.dead_moisture(rh, t, stick)
             self.moist.append(m + (live[0], live[1])); self.met.append((t, rh, stick))
 
+    def use_hrrr(self, path=None, gust_share=0.0):
+        """Switch the wind source to HRRR analysis (protocol A6, W2). File written by scripts/fetch_hrrr.py."""
+        from scipy.interpolate import LinearNDInterpolator
+        d = np.load(path or os.path.join(self.dir, "weather", "hrrr_f00.npz"))
+        x, y = self.xy(d["lon"].ravel(), d["lat"].ravel())
+        self._hrrr = dict(tri=LinearNDInterpolator(np.c_[x, y], np.zeros(len(x))), ue=d["ue"], vn=d["vn"], gust=d["gust"],
+                          lead=(self.t0 - _utc(str(d["first_hour_utc"]))) / timedelta(hours=1), g=float(gust_share))
+        self._cache = {}
+
+    def _hrrr_at(self, h, GX, GY):
+        H = self._hrrr
+        t = H["lead"] + h + 0.5                                 # middle of the fire hour, in HRRR hours
+        k = int(np.clip(np.floor(t), 0, len(H["ue"]) - 2)); w = float(np.clip(t - k, 0.0, 1.0))
+        out = []
+        for key in ("ue", "vn", "gust"):
+            v = (1 - w) * H[key][k] + w * H[key][k + 1]
+            H["tri"].values = v.ravel()[:, None].astype(np.float64)
+            out.append(H["tri"](GX, GY))
+        ue, vn, gust = out
+        sp = np.hypot(ue, vn)
+        f = np.where(sp > 0, (sp + H["g"] * np.maximum(gust - sp, 0.0)) / np.maximum(sp, 1e-9), 1.0) / 1.15   # gust share, 10 m to 20 ft
+        return ue * f, vn * f
+
+    def hrrr_vs_stations(self):
+        """Per station: mean HRRR 10 m speed / station speed (station at its own height) and mean direction difference (deg)."""
+        g = self._hrrr["g"]; self._hrrr["g"] = 0.0; rows = []
+        for i, s in enumerate(self.cfg["stations"]):
+            a = np.array([[*(np.asarray(v).item() * 1.15 for v in self._hrrr_at(h, self.sx[i], self.sy[i])), self.H[i, h, 0], self.H[i, h, 1]] for h in range(self.hours)])
+            fac = 1.15 if s["kind"] == "asos" else 1.0
+            ok = np.isfinite(a).all(1)
+            hs = np.hypot(a[ok, 0], a[ok, 1]); ss = np.hypot(a[ok, 2], a[ok, 3]) * fac
+            dd = np.degrees(np.arctan2(a[ok, 0] * a[ok, 3] - a[ok, 1] * a[ok, 2], a[ok, 0] * a[ok, 2] + a[ok, 1] * a[ok, 3]))
+            rows.append(dict(station=s["id"], hrrr_mean=float(hs.mean()), station_mean=float(ss.mean()), ratio=float(hs.mean() / max(ss.mean(), 1e-9)), dir_diff_deg=float(np.mean(dd))))
+        self._hrrr["g"] = g
+        return rows
+
     def wind(self, h, scale=1.0, turn_deg=0.0):
         """20-ft wind on the 30 m grid for hour h: speed (m/s) and solver angle blown toward."""
         step = 20                                               # interpolate on a 600 m lattice, then nearest
         gy = (np.arange(0, self.ny30, step) + 0.5 * step) * self.res; gx = (np.arange(0, self.nx30, step) + 0.5 * step) * self.res
         GX, GY = np.meshgrid(gx, gy)
-        ue = wx.idw(self.H[:, h, 0], self.sx, self.sy, GX, GY); vn = wx.idw(self.H[:, h, 1], self.sx, self.sy, GX, GY)
+        if getattr(self, "_hrrr", None):
+            ue, vn = self._hrrr_at(min(h, self.hours - 1), GX, GY)
+        else:
+            ue = wx.idw(self.H[:, h, 0], self.sx, self.sy, GX, GY); vn = wx.idw(self.H[:, h, 1], self.sx, self.sy, GX, GY)
         ux, uy = wx.to_grid(ue, vn, self.convergence)
         if turn_deg:
             a = np.radians(turn_deg); ux, uy = ux * np.cos(a) - uy * np.sin(a), ux * np.sin(a) + uy * np.cos(a)

@@ -19,6 +19,7 @@ from firesim.real import Fire, overlap
 ap = argparse.ArgumentParser()
 ap.add_argument("cfg"); ap.add_argument("data"); ap.add_argument("out")
 ap.add_argument("--candidate", default="M1"); ap.add_argument("--seeds", type=int, default=1); ap.add_argument("--hours", type=float)
+ap.add_argument("--wind", default="stations"); ap.add_argument("--gust-share", type=float, default=0.0)
 ap.add_argument("--wind-scale", type=float, default=1.0); ap.add_argument("--cell", type=float, default=10.0); ap.add_argument("--params")
 a = ap.parse_args()
 os.makedirs(a.out, exist_ok=True)
@@ -27,6 +28,12 @@ dirty = bool(subprocess.run(["git", "status", "--porcelain"], capture_output=Tru
 t_start = time.time()
 fire = Fire(a.cfg, a.data, a.cell)
 T = (a.hours or fire.hours) * 60.0
+wind_check = None
+if a.wind == "hrrr":
+    fire.use_hrrr(gust_share=a.gust_share)
+    wind_check = fire.hrrr_vs_stations()
+    for r in wind_check:
+        print("HRRR against station:", r, flush=True)
 params = json.load(open(a.params)) if a.params else {}
 print(f"grid {fire.ny} x {fire.nx} at {fire.cell} m, grid north is {fire.convergence:.1f} deg clockwise of true north", flush=True)
 for h in range(0, fire.hours, 3):
@@ -67,7 +74,7 @@ for mins, mask, name in fire.perimeters():
                     model_km2=float((a30 <= mins).sum() * fire.res ** 2 / 1e6), jaccard=j, sorensen=s))
     print(per[-1], flush=True)
 res = dict(fire=fire.cfg["name"], role=fire.cfg["role"], candidate=a.candidate, firesim=__version__, commit=commit, dirty=dirty, seeds=a.seeds,
-           hours=T / 60, cell=fire.cell, wind_scale=a.wind_scale, params=params, convergence_deg=fire.convergence,
+           hours=T / 60, cell=fire.cell, wind_scale=a.wind_scale, wind_source=a.wind, gust_share=a.gust_share, hrrr_vs_stations=wind_check, params=params, convergence_deg=fire.convergence,
            weather=[dict(hour=h, temp_f=fire.met[h][0], rh=fire.met[h][1], stick=fire.met[h][2], moist=fire.moist[h]) for h in range(fire.hours)],
            runs=stats, perimeters=per, seconds=round(time.time() - t_start, 1))
 known = label >= 0
@@ -99,7 +106,7 @@ try:
     cf = ax[0].contourf(hrs, levels=np.linspace(0, T / 60, 9), cmap="inferno", extent=ext, origin="lower", alpha=.9)
     pers = fire.perimeters()
     if pers:
-        mins, mask, name = pers[-1]
+        mins, mask, name = max([p for p in pers if p[0] <= T + 90] or pers[:1], key=lambda p: p[0])
         ax[0].contour(mask.astype(float), levels=[0.5], colors=["#1e88e5"], linewidths=2, extent=ext, origin="lower")
         ax[0].plot([], [], color="#1e88e5", lw=2, label=f"mapped perimeter at {mins / 60:.0f} h ({name})")
     iy, ix = fire.ignitions()[0][:2]
@@ -113,7 +120,7 @@ try:
         ax[1].scatter(bx[m] / 1000, by[m] / 1000, s=1.5, c=col, label=f"{lab} ({m.sum():,})", linewidths=0)
     ax[1].legend(loc="upper left", fontsize=9, markerscale=6); ax[1].set_title("Buildings: record against model"); ax[1].set_xlabel("km")
     ax[1].set_xlim(ax[0].get_xlim()); ax[1].set_ylim(ax[0].get_ylim()); ax[1].set_aspect("equal")
-    fig.suptitle(f"{fire.cfg['name']} ({fire.cfg['role']} fire), FireSim {__version__} {commit[:7]}, {a.candidate}, {a.seeds} run(s). Station weather, no suppression modelled.", fontsize=12)
+    fig.suptitle(f"{fire.cfg['name']} ({fire.cfg['role']} fire), FireSim {__version__} {commit[:7]}, {a.candidate}, {a.seeds} run(s). Wind: {a.wind}, gust share {a.gust_share}. No suppression modelled.", fontsize=12)
     fig.savefig(os.path.join(a.out, "map.png"), bbox_inches="tight")
 except Exception as e:                                           # the chart never blocks the numbers
     print("chart failed:", repr(e))
