@@ -23,7 +23,7 @@
     {"id": "OVE", "kind": "asos", "lat": 39.49, "lon": -121.62, "file": "weather/asos_OVE_main.csv"},
     {"id": "BAB", "kind": "asos", "lat": 39.1361, "lon": -121.4366, "file": "weather/asos_BAB_main.csv"}
   ],
-  "buildings": {"national": true, "file": "_national/usgs_building_destruction/CONUS_bldg_loss_pts_2002_2022.zip",
+  "buildings": {"national": true, "file": "_national/usgs_building_destruction/CONUS_bldg_loss_pts_2002_2022.zip!CONUS_bldg_loss_pts_2002_2022/CONUS_bldg_loss_pts_2002_2022.shp",
                 "layer": "CONUS_bldg_loss_pts_2002_2022", "where": "Fire_ID = 'CA_2018_CAMP'",
                 "label_field": "bldg_cond", "destroyed": ["B"], "keep": ["expos_type"], "area_m2": 150.0,
                 "note": "USGS CC0 release (doi 10.5066/P1QX6UXD): the pre-fire building points. Positions go to the model; bldg_cond is used only for scoring."},
