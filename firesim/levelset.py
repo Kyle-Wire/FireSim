@@ -167,7 +167,7 @@ def _light(phi, arr, rate, R, L, r, cc, t0, rad, cell):
     np.minimum(sub, d, out=sub)
 
 
-def arrival(rate_head, heading, lb, cell, ignitions, t_end, step_min=60.0, cfl=0.4, phi0=None, spot=None):
+def arrival(rate_head, heading, lb, cell, ignitions, t_end, step_min=60.0, cfl=0.4, phi0=None, spot=None, spot_window=True):
     """Arrival time (minutes) per cell up to t_end.
 
     rate_head (m/min), heading (rad), lb: (ny, nx) or (T, ny, nx), one slice per `step_min`.
@@ -222,7 +222,7 @@ def arrival(rate_head, heading, lb, cell, ignitions, t_end, step_min=60.0, cfl=0
         if spot is not None:
             new = spot(t, t + dt, arr, phi)
             if new:
-                pending.extend((r, cc, max(t0, t + dt), rad, True) for r, cc, t0, rad in new)
+                pending.extend((r, cc, max(t0, t + dt), rad) + ((True,) if spot_window else ()) for r, cc, t0, rad in new)
                 pending.sort(key=lambda g: g[2])
         t += dt
     return arr, phi
