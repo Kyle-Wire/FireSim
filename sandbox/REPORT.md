@@ -56,3 +56,19 @@ Also changed after that first look, before the scored run: the landscape generat
 which wrapped every patch in a closed ring of the next class, so fires stayed in one patch and the non-burnable class
 formed rings. Patches are now irregular cells about 250 m across with independent fuels. The Y3-Y5 rules in CASES.md are
 unchanged. The first attempt's partial numbers (4 of 12 landscapes) are not used.
+
+## Synthetic landscapes, scored run (23 Nov 2026, FireSim after F4), `sandbox/results_synth.json`
+
+| case | result |
+|---|---|
+| Y1 slope | PASS: 300 m upslope in 148.9 min, exact 149.1 (0.1 %) |
+| Y2 wind across slope | PASS: farthest point at 8.5 degrees and 338.7 m; exact 8.2 degrees and 339.4 m |
+| Y3 cell size (12 landscapes, 5 m reference) | PASS at 10 m: area median 2.1 % off, worst 10.7 %; arrival time median 3.0 % off. Reported: 15 m area median 2.1 %, worst 51 %; **30 m area median 6.2 %, worst 73 % under** (seeds 1 and 8: the fire fails to get through a gap one fuel block wide), arrival time off 4 to 37 % |
+| Y4 more wind | PASS on 12 of 12: 8 m/s burns more than 4 m/s (by 1.2x to 74x); no non-burnable cell burned; reruns identical |
+| Y5 wetter fuel | PASS on 12 of 12: dead fuel 4 points wetter burns 0.08x to 0.87x the area |
+
+Reading: run the solver on cells finer than the fuel map. At the fuel map's own 30 m a fire can be stopped by a
+passage one block wide that a finer solver burns through, and that is the difference between 3 and 11 hectares. The
+real-fire runner therefore uses 10 m solver cells on 30 m fuels. Y4 also shows how sharply outcomes turn on wind when
+a fire sits near a fuel boundary (0.5 ha at 4 m/s against 39 ha at 8 m/s on seed 1): single runs are not enough, and
+the product must report an ensemble.
