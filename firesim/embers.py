@@ -29,7 +29,8 @@ PRIORS = dict(
 class Spot:
     """Callback for `levelset.arrival(spot=...)`.
 
-    fli (kW/m), wind (m/s, open) and wind_to (rad, 0 = +x, pi/2 = +row): (ny, nx) or (T, ny, nx) per `step_min`.
+    fli (kW/m), wind (m/s, open) and wind_to (rad, 0 = +x, pi/2 = +row): (ny, nx) or (T, ny, nx) per `step_min`,
+    or functions of the slice number returning (ny, nx).
     burnable: bool (ny, nx). fixed=(throw_m, delay_min): every burned cell throws exactly one ember straight
     downwind that always ignites (sandbox case S7). structures: optional `Structures`.
     """
@@ -42,7 +43,7 @@ class Spot:
         self.cell = float(cell); self.step_min = step_min; self.fixed = fixed; self.st = structures
         self.burnable = np.asarray(burnable, bool)
         sh = self.burnable.shape
-        f3 = lambda v: np.broadcast_to(np.asarray(v, np.float64), (1,) + sh) if np.ndim(v) < 3 else np.asarray(v, np.float64)
+        f3 = lambda v: v if callable(v) else (np.broadcast_to(np.asarray(v, np.float64), (1,) + sh) if np.ndim(v) < 3 else np.asarray(v, np.float64))
         self.fli, self.wind, self.wdir = f3(fli), f3(wind), f3(wind_to)
         self.rng = np.random.default_rng(seed)
         self.Lt = np.empty(0); self.Lx = np.empty(0); self.Ly = np.empty(0)
@@ -51,6 +52,8 @@ class Spot:
             structures.embers = self
 
     def _s(self, t, arr3):
+        if callable(arr3):                                     # a function of the slice number (large fires)
+            return arr3(int(t // self.step_min))
         return arr3[min(int(t // self.step_min), arr3.shape[0] - 1)]
 
     def emit(self, rows, cols, times, i_mw, n):

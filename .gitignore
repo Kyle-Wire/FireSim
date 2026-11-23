@@ -1,1 +1,5 @@
+*.nbc
+*.nbi
+*.pyc
 __pycache__/
+out/

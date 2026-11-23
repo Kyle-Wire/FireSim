@@ -303,7 +303,8 @@ def arrival(rate_head, heading, lb, cell, ignitions, t_end, step_min=60.0, cfl=0
             band=8, refresh=6):
     """Arrival time (minutes) per cell up to t_end.
 
-    rate_head (m/min), heading (rad), lb: (ny, nx) or (T, ny, nx), one slice per `step_min`.
+    rate_head (m/min), heading (rad), lb: (ny, nx) or (T, ny, nx), one slice per `step_min`. For large fires pass
+    rate_head as a function s -> (rate, heading, lb) and the number of slices as `heading`.
     ignitions: list of (row, col, minute, radius_m). spot: optional callback(t0, t1, arr, phi, rows, cols) run after
     each step (embers, structures); rows, cols are the cells that caught fire in the step. It may return new ignitions
     (row, col, minute, radius_m); these are applied inside a local window (see `_light`).
@@ -311,11 +312,23 @@ def arrival(rate_head, heading, lb, cell, ignitions, t_end, step_min=60.0, cfl=0
     and the time step follows the fastest cell in the band. band=None solves the whole grid every step (the reference
     the band is checked against in the sandbox).
     """
-    R = np.asarray(rate_head, np.float64)
-    R3 = R[None] if R.ndim == 2 else R
-    T, ny, nx = R3.shape
-    H3 = np.broadcast_to(np.asarray(heading, np.float64), R3.shape)
-    L3 = np.broadcast_to(np.asarray(lb, np.float64), R3.shape)
+    if callable(rate_head):
+        # rate_head(s) -> (rate, heading, lb) for slice s; heading = number of slices. Keeps one slice in memory.
+        T = int(heading); _c = {}
+        def get(s):
+            if _c.get("s") != s:
+                r_, h_, l_ = rate_head(s)
+                r_ = np.ascontiguousarray(r_, np.float64)
+                _c.update(s=s, v=(r_, np.broadcast_to(np.asarray(h_, np.float64), r_.shape), np.broadcast_to(np.asarray(l_, np.float64), r_.shape)))
+            return _c["v"]
+        ny, nx = get(0)[0].shape
+    else:
+        R = np.asarray(rate_head, np.float64)
+        R3 = R[None] if R.ndim == 2 else R
+        T, ny, nx = R3.shape
+        H3 = np.broadcast_to(np.asarray(heading, np.float64), R3.shape)
+        L3 = np.broadcast_to(np.asarray(lb, np.float64), R3.shape)
+        get = lambda s: (R3[s], H3[s], L3[s])
     yy, xx = np.mgrid[:ny, :nx]
     phi = np.full((ny, nx), 1e9) if phi0 is None else phi0.astype(np.float64).copy()
     pending = sorted(ignitions, key=lambda g: g[2])
@@ -336,7 +349,7 @@ def arrival(rate_head, heading, lb, cell, ignitions, t_end, step_min=60.0, cfl=0
             r, cc, t0, rad = g[:4]
             s0 = min(int(t0 // step_min), T - 1)
             if len(g) > 4:                                    # spot ignition: local window
-                got = _light(phi, arr, rate, R3[s0], L3[s0], int(r), int(cc), t0, rad, cell)
+                got = _light(phi, arr, rate, get(s0)[0], get(s0)[2], int(r), int(cc), t0, rad, cell)
                 if got is not None:
                     w = got[0]
                     tmp[w[0]:w[1], w[2]:w[3]] = phi[w[0]:w[1], w[2]:w[3]]
@@ -345,7 +358,7 @@ def arrival(rate_head, heading, lb, cell, ignitions, t_end, step_min=60.0, cfl=0
             d = np.hypot(yy - r, xx - cc) * cell - max(rad, 0.5 * cell)
             lit = (d <= 0) & (arr == np.inf)
             arr[lit] = t0
-            a0 = ellipse_abc(R3[s0], L3[s0])[0]
+            a0 = ellipse_abc(get(s0)[0], get(s0)[2])[0]
             rate[lit] = a0[lit]
             phi = np.minimum(phi, d)
             tmp[:] = phi; full = True
@@ -353,9 +366,10 @@ def arrival(rate_head, heading, lb, cell, ignitions, t_end, step_min=60.0, cfl=0
         s = min(int(t // step_min), T - 1)
         new_s = s != s_now
         if new_s:
-            a, b, c = ellipse_abc(R3[s], L3[s])
-            burn = R3[s] > 0
-            a = np.where(burn, a, 0.0); hx = np.cos(H3[s]); hy = np.sin(H3[s])
+            Rs, Hs, Ls = get(s)
+            a, b, c = ellipse_abc(Rs, Ls)
+            burn = Rs > 0
+            a = np.where(burn, a, 0.0); hx = np.cos(Hs); hy = np.sin(Hs)
             a = np.ascontiguousarray(a); b = np.ascontiguousarray(b); c = np.ascontiguousarray(c)
             hx = np.ascontiguousarray(hx); hy = np.ascontiguousarray(hy); burn = np.ascontiguousarray(burn)
             s_now = s
@@ -363,7 +377,7 @@ def arrival(rate_head, heading, lb, cell, ignitions, t_end, step_min=60.0, cfl=0
             ay, ax_ = _band(phi, tmp, burn, act, band, ay, ax_, np.array(wins, np.int64).reshape(-1, 4), full, float(cell))
             wins = []; full = False; since = 0; new_s = True
         if new_s:
-            vmax = float(R3[s].max()) if band is None else (float(R3[s][ay, ax_].max()) if len(ay) else 0.0)
+            vmax = float(Rs.max()) if band is None else (float(Rs[ay, ax_].max()) if len(ay) else 0.0)
         nxt = min(t_end, (s + 1) * step_min if s < T - 1 else t_end)
         if pending:
             nxt = min(nxt, pending[0][2])

@@ -72,3 +72,40 @@ passage one block wide that a finer solver burns through, and that is the differ
 real-fire runner therefore uses 10 m solver cells on 30 m fuels. Y4 also shows how sharply outcomes turn on wind when
 a fire sits near a fuel boundary (0.5 ha at 4 m/s against 39 ha at 8 m/s on seed 1): single runs are not enough, and
 the product must report an ensemble.
+
+## Embers and houses, cases S6 to S13b (23 Nov 2026), `sandbox/results_wui.json`
+
+Rules in `CASES.md`, fixed before `embers.py` and `structures.py` ran. `python sandbox/run_wui.py`.
+
+| case | result | numbers |
+|---|---|---|
+| S6 embers on with count 0 = S1 | pass | bit-identical |
+| S7 ember jump over a full strip | pass | strip never burns; first fire behind it 0.06 min after launch + flight delay |
+| S8 house layer with no houses = S1 | pass | bit-identical |
+| S9 house chain | pass | house n lights at exactly 5 n min; far row never lights |
+| S10 neighbour odds | pass | 0.344 lit against 0.3635 expected, tolerance 0.023 |
+| S11 flame reach | pass | 0.208 lit against the code's stated 0.207, tolerance 0.011; none with k_f = 0 |
+| S12 hardening | pass, weakly | 134.8 of 144 houses lost at ember factor 1, 130.6 at 0.5; none at factor 0 with the other paths off. The block is so exposed that nearly every house is lost either way, so this case says little about how much hardening helps |
+| S13 spot window against whole grid, random embers | **fail** | area differed by up to 8 to 12 % between the two rules |
+| S13b the same with one recorded list of spot fires replayed under both rules | pass | area differs by 0.0 %, arrival by 0.0 % |
+
+F5 (a test that tested the wrong thing). S13 failed because once two runs differ by a single cell they draw different
+embers, so it compared two random fires. S13b, added with that reason written down before it ran, replays one list
+of spot fires under both rules and they agree. The spot window is kept.
+
+## Narrow band (23 Nov 2026)
+
+A town-sized fire at 10 m cells is tens of millions of cells, and the first solver updated all of them every step
+with the time step set by the fastest cell anywhere. The solver now works only on cells within 8 cells of the front,
+rebuilds that band every 6 steps and takes its time step from the fastest cell in the band (`levelset._band`).
+A cell entering the band continues the slope of its neighbours already in it. Two wrong turns on the way, both
+caught by cases already in this sandbox: lowering new cells through non-burnable cells let fire through the S3 strip
+16 % early; lowering every band cell to "neighbour plus distance" made the synthetic fires 5 to 9 % larger.
+
+Against the whole-grid solver (`band=None`): S1 to S5 agree to the third digit; on the 12 synthetic landscapes burned
+area is 1 % larger at the median (range -1 to +5 %). Y1 to Y5 pass with the band (10 m against 5 m: area median 1.9 %,
+worst 10.9 %; arrival 2.7 %). `results_synth.json` is now the band run.
+
+Two things learned about running it: two FireSim runs at once on the same cores slow each other about twentyfold
+(thread contention), so runs go one at a time or with `NUMBA_NUM_THREADS` set; and rebuilding the band costs about
+as much as ten steps, which is the next thing to speed up when embers light a spot fire nearly every step.
