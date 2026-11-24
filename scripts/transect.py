@@ -12,7 +12,7 @@ ap.add_argument("cfg"); ap.add_argument("data")
 for k in ("lon0", "lat0", "lon1", "lat1"):
     ap.add_argument(k, type=float)
 ap.add_argument("--hours", default="0,2,4"); ap.add_argument("--n", type=int, default=25)
-ap.add_argument("--wind", default="hrrr"); ap.add_argument("--gust-share", type=float, default=0.0); ap.add_argument("--road-cross", type=float)
+ap.add_argument("--wind", default="hrrr"); ap.add_argument("--gust-share", type=float, default=0.0); ap.add_argument("--road-cross", type=float); ap.add_argument("--aloft", action="store_true", help="also print the 80 m and 850 hPa wind (A10)")
 a = ap.parse_args()
 f = Fire(a.cfg, a.data)
 if a.wind == "hrrr":
@@ -32,6 +32,12 @@ for h in [int(v) for v in a.hours.split(",")]:
         print(f"{km * i / (a.n - 1):5.1f} {f.fuel[r, c]:5d} {f.cc[r, c] * 100:4.0f} {f.ch[r, c]:5.1f} {f.cbh[r, c]:5.1f} {f.cbd[r, c]:5.2f} {f.tan[r, c] * 100:6.0f} "
               f"{C['wind'][r, c]:6.1f} {np.degrees(C['wind_to'][r, c]):7.0f} {C['rate'][r, c]:10.1f} {np.degrees(C['heading'][r, c]):7.0f} {C['lb'][r, c]:4.1f} "
               f"{C['flame'][r, c]:7.1f} {C['fli'][r, c]:9.0f} {int(C['kind'][r, c]):4d}")
+    if a.aloft:
+        print("  wind along the line (m/s, direction blown toward in grid degrees): km, 20 ft, 80 m, 850 hPa")
+        w80 = f.wind(h, level="80"); w85 = f.wind(h, level="850")
+        for i, (r, c) in enumerate(zip(rr, cc)):
+            if i % 3 == 0:
+                print(f"  {km * i / (a.n - 1):5.1f}  {C['wind'][r, c]:5.1f} {np.degrees(C['wind_to'][r, c]):5.0f}   {w80[0][r, c]:5.1f} {np.degrees(w80[1][r, c]):5.0f}   {w85[0][r, c]:5.1f} {np.degrees(w85[1][r, c]):5.0f}")
     burn = C["rate"] > 0
     q = np.percentile(C["rate"][burn], [10, 50, 90, 99])
     print(f"  whole box: burnable share {burn.mean():.2f}; rate percentiles 10/50/90/99: {q.round(1)}; kind shares surface/passive/active: "

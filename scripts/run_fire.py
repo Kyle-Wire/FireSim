@@ -22,6 +22,7 @@ ap.add_argument("--candidate", default="M1"); ap.add_argument("--seeds", type=in
 ap.add_argument("--max-minutes", type=float, default=110.0, help="wall-clock cap for the whole script; it stops itself")
 ap.add_argument("--wind", default="stations"); ap.add_argument("--gust-share", type=float, default=0.0)
 ap.add_argument("--wind-scale", type=float, default=1.0); ap.add_argument("--cell", type=float, default=10.0); ap.add_argument("--params")
+ap.add_argument("--ember-wind", default="surface", choices=["surface", "80", "850"], help="protocol A10: wind that carries embers (HRRR only for 80 m and 850 hPa)")
 ap.add_argument("--road-cross", type=float, help="protocol A8 road rule R1: flame length (m) at which thin road lines burn; omitted = rule off")
 a = ap.parse_args()
 os.makedirs(a.out, exist_ok=True)
@@ -36,6 +37,8 @@ if a.wind == "hrrr":
     wind_check = fire.hrrr_vs_stations()
     for r in wind_check:
         print("HRRR against station:", r, flush=True)
+if a.ember_wind != "surface":
+    fire.use_ember_wind(a.ember_wind)
 if a.road_cross is not None:
     fire.use_roads(a.road_cross)
     print(f"road rule R1 on: {int(fire.thin.sum())} thin cells, L_cross {a.road_cross} m", flush=True)
@@ -59,11 +62,11 @@ for seed in range(a.seeds):
     t1 = time.time()
     if a.candidate == "M1":
         st = Structures(bx, by, barea, fire.cell, seed=seed, k_s=0.0, brands=0.0, **params.get("houses", {}))
-        sp = Spot(fire.cell, fire.lookup("fli", **kw), fire.lookup("wind", **kw), fire.lookup("wind_to", **kw),
+        sp = Spot(fire.cell, fire.lookup("fli", **kw), fire.lookup("ewind", **kw), fire.lookup("ewind_to", **kw),
                   burnable, seed=seed, structures=st, gen=0.0)
     else:
         st = Structures(bx, by, barea, fire.cell, seed=seed, **params.get("houses", {}))
-        sp = Spot(fire.cell, fire.lookup("fli", **kw), fire.lookup("wind", **kw), fire.lookup("wind_to", **kw),
+        sp = Spot(fire.cell, fire.lookup("fli", **kw), fire.lookup("ewind", **kw), fire.lookup("ewind_to", **kw),
                   burnable, seed=seed, structures=st, **params.get("embers", {}))
     def watched(t0_, t1_, arr_, phi_, r_, c_, sp=sp, state={"h": -1}):
         if time.time() - t_start > a.max_minutes * 60:
@@ -95,7 +98,7 @@ for mins, mask, name in pers:
                     model_km2=float((a30 <= mins).sum() * fire.res ** 2 / 1e6), jaccard=j, sorensen=s))
     print(per[-1], flush=True)
 res = dict(fire=fire.cfg["name"], role=fire.cfg["role"], candidate=a.candidate, firesim=__version__, commit=commit, dirty=dirty, seeds=a.seeds,
-           hours=T / 60, cell=fire.cell, wind_scale=a.wind_scale, wind_source=a.wind, gust_share=a.gust_share, road_cross=a.road_cross, hrrr_vs_stations=wind_check, params=params, convergence_deg=fire.convergence,
+           hours=T / 60, cell=fire.cell, wind_scale=a.wind_scale, wind_source=a.wind, gust_share=a.gust_share, road_cross=a.road_cross, ember_wind=a.ember_wind, hrrr_vs_stations=wind_check, params=params, convergence_deg=fire.convergence,
            weather=[dict(hour=h, temp_f=fire.met[h][0], rh=fire.met[h][1], stick=fire.met[h][2], moist=fire.moist[h]) for h in range(fire.hours)],
            runs=stats, perimeters=per, seconds=round(time.time() - t_start, 1))
 known = label >= 0
