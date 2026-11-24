@@ -23,6 +23,7 @@ PRIORS = dict(
     k_f=0.5, d_f=10.0, r_f=40.0,                    # flame: strength, e-fold distance m, cutoff m
     p_e=0.05, tau_e=10.0,                           # ember: chance per effective ember on the footprint, delay min
     brands=20.0, i_b=5.0, tau_b=60.0,               # embers thrown by a burning house, their intensity scale MW/m, burn time min
+    u_ref=0.0, p_u=2.0,                             # rule H1 (protocol A12): k_s and brands x min(1, U / u_ref)^p_u; u_ref 0 = off
 )
 FLAME, EMBER, NEIGHBOUR, GIVEN = 1, 2, 3, 4
 
@@ -87,15 +88,21 @@ class Structures:
             i = due[np.argmin(self.t_sched[due])]
             ti = self.t_sched[i]
             self.t_ign[i] = ti; self.cause[i] = self.c_sched[i]
+            wf = 1.0
+            if p["u_ref"] > 0 and self.embers is not None:     # H1: the 20-ft wind at this house when it lights
+                e = self.embers; ny, nx = e.burnable.shape
+                ri = min(max(int(round(self.y[i] / self.cell)), 0), ny - 1); ci = min(max(int(round(self.x[i] / self.cell)), 0), nx - 1)
+                u = float(np.asarray(e._s(ti, e.wind)[np.array([ri]), np.array([ci])])[0])
+                wf = min(1.0, max(u, 0.0) / p["u_ref"]) ** p["p_u"]
             if p["k_s"] > 0:
                 nb = np.asarray(self.tree.query_ball_point([self.x[i], self.y[i]], p["r_s"] + self.rad[i] + self.rmax), int)
                 nb = nb[~np.isfinite(self.t_ign[nb])]
                 d = np.maximum(np.hypot(self.x[nb] - self.x[i], self.y[nb] - self.y[i]) - self.rad[nb] - self.rad[i], 0.0)
                 nb, d = nb[d <= p["r_s"]], d[d <= p["r_s"]]
-                got = nb[self.rng.random(len(nb)) < 1 - np.exp(-p["k_s"] * self.s_f[nb] * np.exp(-d / p["d_s"]))]
+                got = nb[self.rng.random(len(nb)) < 1 - np.exp(-p["k_s"] * wf * self.s_f[nb] * np.exp(-d / p["d_s"]))]
                 self._sched(got, ti + p["tau_s"], NEIGHBOUR)
             if self.embers is not None and p["brands"] > 0 and self.embers.fixed is None:
-                n = self.rng.poisson(p["brands"])
+                n = self.rng.poisson(p["brands"] * wf)
                 if n:
                     r = np.full(n, int(round(self.y[i] / self.cell))); c = np.full(n, int(round(self.x[i] / self.cell)))
                     ny, nx = self.embers.burnable.shape
