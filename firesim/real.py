@@ -66,13 +66,13 @@ class Fire:
         x0, y0 = tr.transform(lon, lat); x1, y1 = tr.transform(lon, lat + 0.01)
         self.convergence = float(np.degrees(np.arctan2(-(x1 - x0), y1 - y0)))
         self._weather()
-        self._cache = {}
+        self._cache = {}; self._coarse = {}
         self.l_cross = None; self.thin = np.zeros(self.fuel.shape, bool); self.fuel_road = self.fuel
 
     def use_roads(self, l_cross):
         """Protocol A8 road rule R1: thin non-burnable lines burn as the fuel beside them when its flame >= l_cross (m)."""
         from .landscape import thin_barriers
-        self.l_cross = float(l_cross); self.thin, self.fuel_road = thin_barriers(self.fuel); self._cache = {}
+        self.l_cross = float(l_cross); self.thin, self.fuel_road = thin_barriers(self.fuel); self._cache = {}; self._coarse = {}
 
     # --- coordinates: solver x, y in metres; cell (row, col) centre is at (col * cell, row * cell)
     def xy(self, lon, lat):
@@ -106,7 +106,7 @@ class Fire:
         x, y = self.xy(d["lon"].ravel(), d["lat"].ravel())
         self._hrrr = dict(tri=LinearNDInterpolator(np.c_[x, y], np.zeros(len(x))), ue=d["ue"], vn=d["vn"], gust=d["gust"],
                           lead=(self.t0 - _utc(str(d["first_hour_utc"]))) / timedelta(hours=1), g=float(gust_share))
-        self._cache = {}
+        self._cache = {}; self._coarse = {}
 
     def _hrrr_at(self, h, GX, GY):
         H = self._hrrr
@@ -155,17 +155,38 @@ class Fire:
         """Fields for hour h on the solver grid: dict rate, heading, lb, fli, wind, wind_to (float32 except rate)."""
         key = (h, wind_scale, wind_turn, moist_add, crown)
         if self._cache.get("key") != key:
-            h = min(h, self.hours - 1)
+            C = self.coarse(h, wind_scale, wind_turn, moist_add, crown)
+            up = lambda a, dt=np.float32: np.repeat(np.repeat(a.astype(dt), self.k, 0), self.k, 1)
+            self._cache = dict(key=key, rate=up(C["rate"], np.float64), heading=up(C["heading"]), lb=up(C["lb"]),
+                               kind=C["kind"], flame=C["flame"])
+        return self._cache
+
+    def coarse(self, h, wind_scale=1.0, wind_turn=0.0, moist_add=0.0, crown=True):
+        """The same fields on the 30 m fuel grid, a few hours kept (embers and houses look back and ahead an hour,
+        and rebuilding the fields each time was half of a run's wall time)."""
+        h = min(h, self.hours - 1)
+        key = (h, wind_scale, wind_turn, moist_add, crown, self.l_cross)
+        if key not in self._coarse:
             sp, to = self.wind(h, wind_scale, wind_turn)
             m = self.moist[h]; m = (m[0] + moist_add, m[1] + moist_add, m[2] + moist_add, m[3], m[4])
             F = fields(self.fuel_road, m, sp, to, self.tan, self.upslope, self.cc, self.ch, self.cbh, self.cbd, crown=crown)
             if self.l_cross is not None:
                 from .landscape import road_gate
                 F = road_gate(F, self.thin, self.l_cross)
-            up = lambda a, dt=np.float32: np.repeat(np.repeat(a.astype(dt), self.k, 0), self.k, 1)
-            self._cache = dict(key=key, rate=up(F["rate"], np.float64), heading=up(F["heading"]), lb=up(F["lb"]),
-                               fli=up(F["fli"]), wind=up(sp), wind_to=up(to), kind=F["kind"], flame=F["flame"])
-        return self._cache
+            if len(self._coarse) >= 4:
+                self._coarse.pop(next(iter(self._coarse)))
+            f32 = lambda a: np.asarray(a).astype(np.float32)
+            self._coarse[key] = dict(rate=F["rate"], heading=F["heading"], lb=F["lb"], kind=F["kind"], flame=F["flame"],
+                                     fli=f32(F["fli"]), wind=f32(sp), wind_to=f32(to))
+        return self._coarse[key]
+
+    def lookup(self, name, **kw):
+        """s -> an object indexed [rows, cols] in solver cells that reads field `name` from the 30 m grid."""
+        k = self.k
+        class _Up:
+            def __init__(self, a): self.a = a
+            def __getitem__(self, rc): return self.a[np.asarray(rc[0]) // k, np.asarray(rc[1]) // k]
+        return lambda s: _Up(self.coarse(s, **kw)[name])
 
     def provider(self, **kw):
         return lambda s: (lambda d: (d["rate"], d["heading"], d["lb"]))(self.slice(s, **kw))

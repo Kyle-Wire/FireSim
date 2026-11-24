@@ -59,11 +59,11 @@ for seed in range(a.seeds):
     t1 = time.time()
     if a.candidate == "M1":
         st = Structures(bx, by, barea, fire.cell, seed=seed, k_s=0.0, brands=0.0, **params.get("houses", {}))
-        sp = Spot(fire.cell, lambda s: fire.slice(s, **kw)["fli"], lambda s: fire.slice(s, **kw)["wind"], lambda s: fire.slice(s, **kw)["wind_to"],
+        sp = Spot(fire.cell, fire.lookup("fli", **kw), fire.lookup("wind", **kw), fire.lookup("wind_to", **kw),
                   burnable, seed=seed, structures=st, gen=0.0)
     else:
         st = Structures(bx, by, barea, fire.cell, seed=seed, **params.get("houses", {}))
-        sp = Spot(fire.cell, lambda s: fire.slice(s, **kw)["fli"], lambda s: fire.slice(s, **kw)["wind"], lambda s: fire.slice(s, **kw)["wind_to"],
+        sp = Spot(fire.cell, fire.lookup("fli", **kw), fire.lookup("wind", **kw), fire.lookup("wind_to", **kw),
                   burnable, seed=seed, structures=st, **params.get("embers", {}))
     def watched(t0_, t1_, arr_, phi_, r_, c_, sp=sp, state={"h": -1}):
         if time.time() - t_start > a.max_minutes * 60:
