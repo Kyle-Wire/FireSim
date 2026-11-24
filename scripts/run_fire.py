@@ -46,6 +46,10 @@ kw = dict(wind_scale=a.wind_scale)
 prov = fire.provider(**kw)
 burnable = fire.slice(0, **kw)["rate"] > 0
 lost = np.zeros(len(bx)); t_sum = np.zeros(len(bx)); causes = np.zeros(5); arr0 = None; stats = []
+pers = fire.perimeters()
+sat = [p for p in pers if p[2] != "GeoMAC"] or pers          # A7: the latest satellite (else incident) perimeter in the window
+fit_per = max(sat, key=lambda p: p[0]) if sat else None
+share = np.zeros((fire.ny30, fire.nx30))
 for seed in range(a.seeds):
     t1 = time.time()
     if a.candidate == "M1":
@@ -68,6 +72,8 @@ for seed in range(a.seeds):
     stats.append(dict(seed=seed, seconds=round(time.time() - t1, 1), burned_km2=float(np.isfinite(arr).sum() * fire.cell ** 2 / 1e6),
                       houses_lit=int(l.sum()), embers=int(sp.n_thrown), spot_fires=int(sp.n_spots)))
     print(stats[-1], flush=True)
+    if fit_per is not None:
+        share += arr[fire.k // 2::fire.k, fire.k // 2::fire.k] <= fit_per[0]
     if arr0 is None:
         arr0 = arr
         np.savez_compressed(os.path.join(a.out, "arrival_seed0.npz"), arrival_min=arr[fire.k // 2::fire.k, fire.k // 2::fire.k].astype(np.float32),
@@ -76,7 +82,7 @@ p_model = lost / a.seeds
 # ---- scoring: nothing below feeds back into the model
 k = fire.k; a30 = arr0[k // 2::k, k // 2::k]
 per = []
-for mins, mask, name in fire.perimeters():
+for mins, mask, name in pers:
     j, s = overlap(a30 <= mins, mask)
     per.append(dict(source=name, hours=round(mins / 60, 2), observed_km2=float(mask.sum() * fire.res ** 2 / 1e6),
                     model_km2=float((a30 <= mins).sum() * fire.res ** 2 / 1e6), jaccard=j, sorensen=s))
@@ -100,6 +106,12 @@ if known.any():
                             bits_per_building=bits, bits_same_fire_rate=bits0, auc=auc,
                             cause_share=dict(flame=causes[1] / max(causes.sum(), 1), ember=causes[2] / max(causes.sum(), 1), neighbour=causes[3] / max(causes.sum(), 1)),
                             note="bits_same_fire_rate uses this fire's own destroyed fraction (not baseline B0, which uses the calibration fires' pooled fraction)")
+    if fit_per is not None:                                    # protocol A7 fitting score
+        q = np.clip(share / a.seeds, 0.005, 0.995); m = fit_per[1]
+        area_bits = float(-(np.log2(q[m]).sum() + np.log2(1 - q[~m]).sum()))
+        res["fit"] = dict(perimeter=fit_per[2], hours=fit_per[0] / 60, area_bits_per_building=area_bits / int(known.sum()),
+                          score=bits + area_bits / int(known.sum()), note="protocol A7: bits per building + area bits / buildings; lower is better")
+        print("fit", res["fit"], flush=True)
     print(res["buildings"], flush=True)
 np.savez_compressed(os.path.join(a.out, "buildings.npz"), x=bx, y=by, p_model=p_model, label=label,
                     t_mean=np.where(lost > 0, t_sum / np.maximum(lost, 1), np.nan), **{k_: v for k_, v in extra.items()})
@@ -112,7 +124,6 @@ try:
     hrs = np.where(np.isfinite(a30), a30 / 60.0, np.nan)
     ax[0].imshow(np.where(burnable[k // 2::k, k // 2::k], 0.95, 0.8), cmap="gray", vmin=0, vmax=1, extent=ext, origin="lower")
     cf = ax[0].contourf(hrs, levels=np.linspace(0, T / 60, 9), cmap="inferno", extent=ext, origin="lower", alpha=.9)
-    pers = fire.perimeters()
     if pers:
         mins, mask, name = max([p for p in pers if p[0] <= T + 90] or pers[:1], key=lambda p: p[0])
         ax[0].contour(mask.astype(float), levels=[0.5], colors=["#1e88e5"], linewidths=2, extent=ext, origin="lower")
