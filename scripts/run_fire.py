@@ -24,6 +24,7 @@ ap.add_argument("--wind", default="stations"); ap.add_argument("--gust-share", t
 ap.add_argument("--wind-scale", type=float, default=1.0); ap.add_argument("--cell", type=float, default=10.0); ap.add_argument("--params")
 ap.add_argument("--ember-wind", default="surface", choices=["surface", "80", "850", "blend"], help="protocol A10: wind that carries embers (HRRR only for 80 m and 850 hPa)")
 ap.add_argument("--loft-mw", type=float, default=20.0, help="protocol A11, with --ember-wind blend: fireline intensity (MW/m) at which embers ride the 850 hPa wind fully")
+ap.add_argument("--windsim", nargs="+", help="protocol A15, wind option W3: WindSim terrain_wind.npz files (one per inflow bearing); needs --wind hrrr")
 ap.add_argument("--road-cross", type=float, help="protocol A8 road rule R1: flame length (m) at which thin road lines burn; omitted = rule off")
 a = ap.parse_args()
 os.makedirs(a.out, exist_ok=True)
@@ -38,6 +39,8 @@ if a.wind == "hrrr":
     wind_check = fire.hrrr_vs_stations()
     for r in wind_check:
         print("HRRR against station:", r, flush=True)
+if a.windsim:
+    fire.use_windsim(a.windsim)
 if a.ember_wind != "surface":
     fire.use_ember_wind("850" if a.ember_wind == "blend" else a.ember_wind)
 if a.road_cross is not None:
@@ -117,7 +120,8 @@ for mins, dr, dc in fire.detections():                     # A11 first-night che
     det.append(dict(hours=round(mins / 60, 2), detections=int(len(dr)), share_on_modelled_fire=float(near.mean()), model_km2=float(b.sum() * fire.res ** 2 / 1e6)))
     print("detections", det[-1], flush=True)
 res = dict(fire=fire.cfg["name"], role=fire.cfg["role"], candidate=a.candidate, firesim=__version__, commit=commit, dirty=dirty, seeds=a.seeds, stopped_early=stopped,
-           hours=T / 60, cell=fire.cell, wind_scale=a.wind_scale, wind_source=a.wind, gust_share=a.gust_share, road_cross=a.road_cross, ember_wind=a.ember_wind, loft_mw=a.loft_mw if blend else None, hrrr_vs_stations=wind_check, params=params, convergence_deg=fire.convergence,
+           hours=T / 60, cell=fire.cell, wind_scale=a.wind_scale, wind_source=a.wind, gust_share=a.gust_share, road_cross=a.road_cross, windsim=[os.path.basename(os.path.dirname(os.path.dirname(os.path.abspath(p)))) for p in a.windsim] if a.windsim else None,
+           windsim_hours=dict(used=fire._ws.hours_used, kept_hrrr=fire._ws.hours_kept) if a.windsim else None, ember_wind=a.ember_wind, loft_mw=a.loft_mw if blend else None, hrrr_vs_stations=wind_check, params=params, convergence_deg=fire.convergence,
            weather=[dict(hour=h, temp_f=fire.met[h][0], rh=fire.met[h][1], stick=fire.met[h][2], moist=fire.moist[h]) for h in range(fire.hours)],
            runs=stats, perimeters=per, detections=det, seconds=round(time.time() - t_start, 1))
 known = label >= 0

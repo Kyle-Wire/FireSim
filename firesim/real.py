@@ -109,6 +109,22 @@ class Fire:
                           lead=(self.t0 - _utc(str(d["first_hour_utc"]))) / timedelta(hours=1), g=float(gust_share))
         self._cache = {}; self._coarse = {}
 
+    def use_windsim(self, paths):
+        """Protocol A15, wind option W3: WindSim terrain wind inside its sub-domain, HRRR elsewhere and in hours
+        whose 80 m reference bearing is outside the runs' range. Needs use_hrrr first (with the 80 m wind)."""
+        from pyproj import Transformer
+        from .windsim import TerrainWind, load_run
+        if "ue80" not in self._hrrr:
+            raise ValueError("W3 needs the HRRR 80 m wind: fetch it again with scripts/fetch_hrrr.py")
+        epsg = load_run(paths[0])["epsg"]
+        t = Transformer.from_crs(self.crs, f"EPSG:{epsg}", always_xy=True)
+        ll = Transformer.from_crs("EPSG:4326", f"EPSG:{epsg}", always_xy=True)
+        b = self.cfg["box"]; lon, lat = 0.5 * (b[0] + b[2]), 0.5 * (b[1] + b[3])
+        x0, y0 = ll.transform(lon, lat); x1, y1 = ll.transform(lon, lat + 0.01)
+        gamma = float(np.degrees(np.arctan2(-(x1 - x0), y1 - y0)))
+        self._ws = TerrainWind(paths, lambda X, Y: t.transform(X + self.left + 0.5 * self.cell, Y + self.bottom + 0.5 * self.cell), gamma)
+        self._cache = {}; self._coarse = {}
+
     def _hrrr_at(self, h, GX, GY, level=None):
         """True east/north wind at points. level None: 10 m wind with the gust share, brought to 20 ft.
         level "80" or "850": the wind at 80 m above ground or at 850 hPa, as it is (protocol A10)."""
@@ -153,6 +169,10 @@ class Fire:
         GX, GY = np.meshgrid(gx, gy)
         if getattr(self, "_hrrr", None):
             ue, vn = self._hrrr_at(min(h, self.hours - 1), GX, GY, level)
+            if level is None and getattr(self, "_ws", None):
+                e80, n80 = self._hrrr_at(min(h, self.hours - 1), GX, GY, "80")
+                ue, vn, _ = self._ws.wind(GX, GY, ue * 1.15, vn * 1.15, e80, n80)   # W3 works at 10 m
+                ue, vn = ue / 1.15, vn / 1.15
         else:
             ue = wx.idw(self.H[:, h, 0], self.sx, self.sy, GX, GY); vn = wx.idw(self.H[:, h, 1], self.sx, self.sy, GX, GY)
         ux, uy = wx.to_grid(ue, vn, self.convergence)
