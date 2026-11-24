@@ -29,6 +29,7 @@ def load_run(path):
     e, n = d["east_10m"], d["north_10m"]
     toward = np.degrees(np.arctan2(e, n))
     return dict(bearing_from=float(d["direction_deg"]), epsg=int(d["epsg"]), x=d["x_utm"], y=d["y_utm"], S=np.hypot(e, n) / ref,
+                S80=np.hypot(d["east_80m"], d["north_80m"]) / ref, ground=d["ground_m"] if "ground_m" in d.files else None,
                 turn=_wrap(toward - (float(d["direction_deg"]) + 180.0)), inner=inner, up=up, ref80=ref)
 
 
@@ -63,28 +64,32 @@ class TerrainWind:
         if key == self._key:
             return
         x, y = self.to_utm(GX, GY)
-        S, T = [], []
+        S, T, S80 = [], [], []
         for r in self.runs:
             pts = np.c_[r["x"], r["y"]]
-            f = LinearNDInterpolator(pts, np.c_[r["S"], np.cos(np.radians(r["turn"])), np.sin(np.radians(r["turn"]))])
+            f = LinearNDInterpolator(pts, np.c_[r["S"], np.cos(np.radians(r["turn"])), np.sin(np.radians(r["turn"])), r["S80"]])
             v = f(x, y); ok = r["inner"][cKDTree(pts).query(np.c_[np.ravel(x), np.ravel(y)])[1]].reshape(np.shape(x))
             v[~ok] = np.nan
-            S.append(v[..., 0]); T.append(np.degrees(np.arctan2(v[..., 2], v[..., 1])))
-        self.S, self.turn = np.array(S), np.array(T)
+            S.append(v[..., 0]); T.append(np.degrees(np.arctan2(v[..., 2], v[..., 1]))); S80.append(v[..., 3])
+        self.S, self.turn, self.S80 = np.array(S), np.array(T), np.array(S80)
         mid = self.runs[len(self.runs) // 2]
         d, _ = cKDTree(np.c_[mid["x"][mid["up"]], mid["y"][mid["up"]]]).query(np.c_[np.ravel(x), np.ravel(y)])
         step = np.sqrt((mid["x"].max() - mid["x"].min()) * (mid["y"].max() - mid["y"].min()) / len(mid["x"]))
         self.ref_pts = (d < 1.5 * step).reshape(np.shape(x))   # the caller's points inside the middle run's upwind third
         self._key = key
 
-    def wind(self, GX, GY, e10, n10, e80, n80):
-        """10 m wind at the points: W3 where it applies, else the wind passed in. Returns (east, north, used)."""
+    def wind(self, GX, GY, e10, n10, e80, n80, clearing_z0=None):
+        """10 m wind at the points: W3 where it applies, else the wind passed in. Returns (east, north, used).
+        clearing_z0 (A15 note 2, station tables only): the run's 80 m wind brought down to 10 m by the log law over
+        that roughness, instead of the run's own 10 m wind over its land-cover roughness."""
         self.prepare(GX, GY)
         if not self.ref_pts.any():
             self.hours_kept += 1; return e10, n10, False
         re, rn = float(np.mean(e80[self.ref_pts])), float(np.mean(n80[self.ref_pts]))
         ref_speed = float(np.mean(np.hypot(e80, n80)[self.ref_pts]))
-        out = blend(np.degrees(np.arctan2(-re, -rn)) % 360.0, ref_speed, self.bearings, self.S, self.turn, self.slack)
+        S = self.S if clearing_z0 is None else self.S80 * np.log(10.0 / clearing_z0) / np.log(80.0 / clearing_z0)
+        self.last_bearing = float(np.degrees(np.arctan2(-re, -rn)) % 360.0)
+        out = blend(self.last_bearing, ref_speed, self.bearings, S, self.turn, self.slack)
         if out is None:
             self.hours_kept += 1; return e10, n10, False
         ok = np.isfinite(out[0])

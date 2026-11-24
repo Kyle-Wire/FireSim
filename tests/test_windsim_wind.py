@@ -11,7 +11,7 @@ def run_file(tmp_path, direction, speedup, turn_deg, half=10000.0, blend_m=2000.
     x = 600000.0 + xl * ex - yl * ey; y = 4400000.0 + xl * ey + yl * ex
     t = np.radians(direction + 180.0 + turn_deg)
     p = tmp_path / f"r{direction:g}.npz"
-    np.savez(p, direction_deg=direction, epsg=32610, half_width_m=half, edge_blend_m=blend_m, x_local=xl, y_local=yl, x_utm=x, y_utm=y,
+    np.savez(p, direction_deg=direction, epsg=32610, half_width_m=half, edge_blend_m=blend_m, x_local=xl, y_local=yl, x_utm=x, y_utm=y, ground_m=np.zeros(len(x)),
              east_80m=np.full(len(x), 12 * ex), north_80m=np.full(len(x), 12 * ey),
              east_10m=np.full(len(x), speedup * 12 * np.sin(t)), north_10m=np.full(len(x), speedup * 12 * np.cos(t)))
     return str(p)
@@ -44,3 +44,12 @@ def test_terrain_wind_inside_and_outside(tmp_path):
     assert np.allclose(e[far], 1.0) and np.allclose(n[far], 0.0)        # outside the runs: the wind passed in
     e, n, used = tw.wind(GX, GY, e10, n10, -e80, -n80)                  # reference from the south-west: W3 stands down
     assert not used and np.allclose(e, 1.0) and tw.hours_kept == 1 and tw.hours_used == 1
+
+
+def test_clearing_table_uses_the_80_m_wind(tmp_path):
+    tw = TerrainWind([run_file(tmp_path, 45.0, 0.5, 0.0)], lambda X, Y: (X + 600000.0, Y + 4400000.0))
+    GX, GY = np.meshgrid(np.arange(-7000.0, 7001.0, 1000.0), np.arange(-7000.0, 7001.0, 1000.0))
+    b = np.radians(45.0 + 180.0); e80 = np.full(GX.shape, 20 * np.sin(b)); n80 = np.full(GX.shape, 20 * np.cos(b))
+    e, n, used = tw.wind(GX, GY, e80 * 0, n80 * 0, e80, n80, clearing_z0=0.1)
+    mid = (np.abs(GX) < 3000) & (np.abs(GY) < 3000)
+    assert used and np.allclose(np.hypot(e, n)[mid], 20.0 * np.log(100.0) / np.log(800.0)) and abs(tw.last_bearing - 45.0) < 1e-9
