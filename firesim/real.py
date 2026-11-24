@@ -67,7 +67,7 @@ class Fire:
         self.convergence = float(np.degrees(np.arctan2(-(x1 - x0), y1 - y0)))
         self._weather()
         self._cache = {}; self._coarse = {}
-        self.l_cross = None; self.thin = np.zeros(self.fuel.shape, bool); self.fuel_road = self.fuel
+        self.ember_level = None; self.l_cross = None; self.thin = np.zeros(self.fuel.shape, bool); self.fuel_road = self.fuel
 
     def use_roads(self, l_cross):
         """Protocol A8 road rule R1: thin non-burnable lines burn as the fuel beside them when its flame >= l_cross (m)."""
@@ -105,22 +105,33 @@ class Fire:
         d = np.load(path or os.path.join(self.dir, "weather", "hrrr_f00.npz"))
         x, y = self.xy(d["lon"].ravel(), d["lat"].ravel())
         self._hrrr = dict(tri=LinearNDInterpolator(np.c_[x, y], np.zeros(len(x))), ue=d["ue"], vn=d["vn"], gust=d["gust"],
+                          **{k: d[k] for k in ("ue80", "vn80", "ue850", "vn850") if k in d.files},
                           lead=(self.t0 - _utc(str(d["first_hour_utc"]))) / timedelta(hours=1), g=float(gust_share))
         self._cache = {}; self._coarse = {}
 
-    def _hrrr_at(self, h, GX, GY):
+    def _hrrr_at(self, h, GX, GY, level=None):
+        """True east/north wind at points. level None: 10 m wind with the gust share, brought to 20 ft.
+        level "80" or "850": the wind at 80 m above ground or at 850 hPa, as it is (protocol A10)."""
         H = self._hrrr
         t = H["lead"] + h + 0.5                                 # middle of the fire hour, in HRRR hours
         k = int(np.clip(np.floor(t), 0, len(H["ue"]) - 2)); w = float(np.clip(t - k, 0.0, 1.0))
         out = []
-        for key in ("ue", "vn", "gust"):
+        for key in ("ue", "vn", "gust") if level is None else ("ue" + level, "vn" + level):
             v = (1 - w) * H[key][k] + w * H[key][k + 1]
             H["tri"].values = v.ravel()[:, None].astype(np.float64)
             out.append(H["tri"](GX, GY))
+        if level is not None:
+            return out[0], out[1]
         ue, vn, gust = out
         sp = np.hypot(ue, vn)
         f = np.where(sp > 0, (sp + H["g"] * np.maximum(gust - sp, 0.0)) / np.maximum(sp, 1e-9), 1.0) / 1.15   # gust share, 10 m to 20 ft
         return ue * f, vn * f
+
+    def use_ember_wind(self, level):
+        """Protocol A10: embers ride the wind aloft. level "80" (80 m above ground) or "850" (850 hPa); None = the 20-ft wind."""
+        if level is not None and "ue" + level not in self._hrrr:
+            raise ValueError(f"the HRRR file has no {level} wind: fetch it again with scripts/fetch_hrrr.py")
+        self.ember_level = level; self._coarse = {}
 
     def hrrr_vs_stations(self):
         """Per station: mean HRRR 10 m speed / station speed (station at its own height) and mean direction difference (deg)."""
@@ -135,13 +146,13 @@ class Fire:
         self._hrrr["g"] = g
         return rows
 
-    def wind(self, h, scale=1.0, turn_deg=0.0):
-        """20-ft wind on the 30 m grid for hour h: speed (m/s) and solver angle blown toward."""
+    def wind(self, h, scale=1.0, turn_deg=0.0, level=None):
+        """20-ft wind on the 30 m grid for hour h: speed (m/s) and solver angle blown toward. level: wind aloft (A10)."""
         step = 20                                               # interpolate on a 600 m lattice, then nearest
         gy = (np.arange(0, self.ny30, step) + 0.5 * step) * self.res; gx = (np.arange(0, self.nx30, step) + 0.5 * step) * self.res
         GX, GY = np.meshgrid(gx, gy)
         if getattr(self, "_hrrr", None):
-            ue, vn = self._hrrr_at(min(h, self.hours - 1), GX, GY)
+            ue, vn = self._hrrr_at(min(h, self.hours - 1), GX, GY, level)
         else:
             ue = wx.idw(self.H[:, h, 0], self.sx, self.sy, GX, GY); vn = wx.idw(self.H[:, h, 1], self.sx, self.sy, GX, GY)
         ux, uy = wx.to_grid(ue, vn, self.convergence)
@@ -165,7 +176,7 @@ class Fire:
         """The same fields on the 30 m fuel grid, a few hours kept (embers and houses look back and ahead an hour,
         and rebuilding the fields each time was half of a run's wall time)."""
         h = min(h, self.hours - 1)
-        key = (h, wind_scale, wind_turn, moist_add, crown, self.l_cross)
+        key = (h, wind_scale, wind_turn, moist_add, crown, self.l_cross, self.ember_level)
         if key not in self._coarse:
             sp, to = self.wind(h, wind_scale, wind_turn)
             m = self.moist[h]; m = (m[0] + moist_add, m[1] + moist_add, m[2] + moist_add, m[3], m[4])
@@ -178,6 +189,11 @@ class Fire:
             f32 = lambda a: np.asarray(a).astype(np.float32)
             self._coarse[key] = dict(rate=F["rate"], heading=F["heading"], lb=F["lb"], kind=F["kind"], flame=F["flame"],
                                      fli=f32(F["fli"]), wind=f32(sp), wind_to=f32(to))
+            if self.ember_level is not None:
+                es, et = self.wind(h, 1.0, wind_turn, self.ember_level)
+                self._coarse[key].update(ewind=f32(es), ewind_to=f32(et))
+            else:
+                self._coarse[key].update(ewind=self._coarse[key]["wind"], ewind_to=self._coarse[key]["wind_to"])
         return self._coarse[key]
 
     def lookup(self, name, **kw):

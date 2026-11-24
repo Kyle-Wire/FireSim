@@ -5,7 +5,8 @@ python scripts/fetch_hrrr.py fires/camp_2018.json <data_root>
 For each hour of the fire's window, reads the 10 m wind components, the surface gust, and 2 m temperature and
 humidity from NOAA's open HRRR archive (hrrr.tHHz.wrfsfcf00.grib2 on noaa-hrrr-bdp-pds; US government work), by byte
 range, crops to the fire box plus 0.15 degrees, turns the wind from the HRRR grid to true east/north, and writes
-<fire folder>/weather/hrrr_f00.npz: lon, lat (ny, nx); ue, vn, gust (T, ny, nx) in m/s at 10 m; tmp_k, rh; hours.
+<fire folder>/weather/hrrr_f00.npz: lon, lat (ny, nx); ue, vn, gust (T, ny, nx) in m/s at 10 m; tmp_k, rh; hours;
+ue80, vn80 (80 m above ground) and ue850, vn850 (850 hPa), the wind aloft that carries embers (amendment A10).
 Needs rasterio (GDAL's GRIB driver) and pyproj.
 """
 import json, os, sys, tempfile, urllib.request
@@ -15,7 +16,8 @@ import rasterio
 from pyproj import Transformer
 
 WANT = {"UGRD:10 m above ground": "u", "VGRD:10 m above ground": "v", "GUST:surface": "gust",
-        "TMP:2 m above ground": "tmp", "RH:2 m above ground": "rh"}
+        "TMP:2 m above ground": "tmp", "RH:2 m above ground": "rh",
+        "UGRD:80 m above ground": "u80", "VGRD:80 m above ground": "v80", "UGRD:850 mb": "u850", "VGRD:850 mb": "v850"}   # A10: wind aloft for embers
 BASE = "https://noaa-hrrr-bdp-pds.s3.amazonaws.com/hrrr.{d:%Y%m%d}/conus/hrrr.t{d:%H}z.wrfsfcf00.grib2"
 
 
@@ -53,7 +55,13 @@ def hour(d, box):
     c = out["conv"]                                                        # grid +y is c clockwise of true north
     ue = out["u"] * np.cos(c) + out["v"] * np.sin(c); vn = -out["u"] * np.sin(c) + out["v"] * np.cos(c)
     tmp = out["tmp"]; tmp = tmp + 273.15 if np.nanmean(tmp) < 150 else tmp   # GDAL may hand back deg C
-    return out["lon"], out["lat"], ue, vn, out["gust"], tmp, out["rh"]
+    al = []
+    for lev in ("80", "850"):                                              # same turn to true east/north
+        u, v = out.get("u" + lev), out.get("v" + lev)
+        if u is None or v is None:
+            print(f"  no {lev} wind in {url}", flush=True); u = v = np.full(ue.shape, np.nan)
+        al += [u * np.cos(c) + v * np.sin(c), -u * np.sin(c) + v * np.cos(c)]
+    return (out["lon"], out["lat"], ue, vn, out["gust"], tmp, out["rh"], *al)
 
 
 if __name__ == "__main__":
@@ -71,5 +79,6 @@ if __name__ == "__main__":
     out = os.path.join(root, cfg["folder"], "weather", "hrrr_f00.npz")
     np.savez_compressed(out, lon=r[0], lat=r[1], ue=np.array([a[0] for a in acc]), vn=np.array([a[1] for a in acc]),
                         gust=np.array([a[2] for a in acc]), tmp_k=np.array([a[3] for a in acc]), rh=np.array([a[4] for a in acc]),
+                        ue80=np.array([a[5] for a in acc]), vn80=np.array([a[6] for a in acc]), ue850=np.array([a[7] for a in acc]), vn850=np.array([a[8] for a in acc]),
                         first_hour_utc=first.strftime("%Y-%m-%dT%H:%M:%SZ"))
     print("wrote", out)
