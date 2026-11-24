@@ -62,6 +62,7 @@ share = np.zeros((fire.ny30, fire.nx30))
 blend = a.ember_wind == "blend"
 ewind = (fire.lookup("wind", **kw), fire.lookup("wind_to", **kw)) if blend else (fire.lookup("ewind", **kw), fire.lookup("ewind_to", **kw))
 ekw = dict(aloft=(fire.lookup("ewind", **kw), fire.lookup("ewind_to", **kw)), i_loft=a.loft_mw) if blend else {}
+stopped = None
 for seed in range(a.seeds):
     t1 = time.time()
     if a.candidate == "M1":
@@ -74,12 +75,19 @@ for seed in range(a.seeds):
                   burnable, seed=seed, structures=st, **ekw, **params.get("embers", {}))
     def watched(t0_, t1_, arr_, phi_, r_, c_, sp=sp, state={"h": -1}):
         if time.time() - t_start > a.max_minutes * 60:
-            raise SystemExit(f"stopped by --max-minutes {a.max_minutes} at simulated hour {t1_ / 60:.1f} of seed {seed}; nothing written for this run")
+            raise TimeoutError(f"stopped by --max-minutes {a.max_minutes} at simulated hour {t1_ / 60:.1f} of seed {seed}")
         if int(t1_ // 60) > state["h"]:
             state["h"] = int(t1_ // 60)
             print(f"  seed {seed} hour {state['h']:2d}: {time.time() - t1:6.0f} s, embers {sp.n_thrown}, spot fires {sp.n_spots}", flush=True)
         return sp(t0_, t1_, arr_, phi_, r_, c_)
-    arr, _ = arrival(prov, fire.hours, None, fire.cell, fire.ignitions(), T, spot=watched)
+    try:
+        arr, _ = arrival(prov, fire.hours, None, fire.cell, fire.ignitions(), T, spot=watched)
+    except TimeoutError as e:                              # keep the seeds that finished; say so in the result
+        print(e, flush=True)
+        if seed == 0:
+            raise SystemExit("no seed finished; nothing written")
+        stopped = f"{e}; scored on the {seed} seed(s) that finished, {a.seeds} were asked for"; a.seeds = seed
+        break
     l = np.isfinite(st.t_ign); lost += l; t_sum[l] += st.t_ign[l]; causes += np.bincount(st.cause[l], minlength=5)
     stats.append(dict(seed=seed, seconds=round(time.time() - t1, 1), burned_km2=float(np.isfinite(arr).sum() * fire.cell ** 2 / 1e6),
                       houses_lit=int(l.sum()), embers=int(sp.n_thrown), spot_fires=int(sp.n_spots)))
@@ -108,7 +116,7 @@ for mins, dr, dc in fire.detections():                     # A11 first-night che
     near = np.array([pad[r:r + 2 * w + 1, c:c + 2 * w + 1].any() for r, c in zip(dr, dc)])
     det.append(dict(hours=round(mins / 60, 2), detections=int(len(dr)), share_on_modelled_fire=float(near.mean()), model_km2=float(b.sum() * fire.res ** 2 / 1e6)))
     print("detections", det[-1], flush=True)
-res = dict(fire=fire.cfg["name"], role=fire.cfg["role"], candidate=a.candidate, firesim=__version__, commit=commit, dirty=dirty, seeds=a.seeds,
+res = dict(fire=fire.cfg["name"], role=fire.cfg["role"], candidate=a.candidate, firesim=__version__, commit=commit, dirty=dirty, seeds=a.seeds, stopped_early=stopped,
            hours=T / 60, cell=fire.cell, wind_scale=a.wind_scale, wind_source=a.wind, gust_share=a.gust_share, road_cross=a.road_cross, ember_wind=a.ember_wind, loft_mw=a.loft_mw if blend else None, hrrr_vs_stations=wind_check, params=params, convergence_deg=fire.convergence,
            weather=[dict(hour=h, temp_f=fire.met[h][0], rh=fire.met[h][1], stick=fire.met[h][2], moist=fire.moist[h]) for h in range(fire.hours)],
            runs=stats, perimeters=per, detections=det, seconds=round(time.time() - t_start, 1))
