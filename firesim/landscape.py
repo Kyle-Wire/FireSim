@@ -107,3 +107,30 @@ def fields(fuel_number, moist, wind_20ft, wind_to, slope_tan, upslope, canopy_co
     flame = 0.45 * np.power(np.maximum(i_final / 3.4613, 0.0), 0.46) * FT     # Byram, surface form (GTR-371 sec. 4.5)
     return dict(rate=r_final, heading=heading, lb=lb, flame=flame, fli=i_final, kind=kind, r0=r0 * FT, midflame=Umid,
                 rate_surface=rate)
+
+
+def thin_barriers(fuel_number, codes=(91, 99)):
+    """Road rule R1 of protocol FIRE-1 amendment A8 (own rule, no source: LANDFIRE draws roads as lines of
+    non-burnable cells one cell wide). Returns (thin, filled): thin marks cells of the given codes that have
+    burnable cells on both sides along at least one of four axes (N-S, E-W, two diagonals); filled is the fuel
+    map with each thin cell given the lower-numbered fuel of the first such pair."""
+    fn = np.asarray(fuel_number).astype(int)
+    burn = np.isin(fn, list(BY_NUMBER))
+    pad = np.pad(fn, 1, constant_values=-1); pb = np.pad(burn, 1, constant_values=False)
+    ny, nx = fn.shape
+    sl = lambda a, dy, dx: a[1 + dy: 1 + dy + ny, 1 + dx: 1 + dx + nx]
+    thin = np.zeros(fn.shape, bool); filled = fn.copy()
+    cand = np.isin(fn, codes)
+    for dy, dx in ((1, 0), (0, 1), (1, 1), (1, -1)):
+        ok = cand & ~thin & sl(pb, dy, dx) & sl(pb, -dy, -dx)
+        filled[ok] = np.minimum(sl(pad, dy, dx), sl(pad, -dy, -dx))[ok]
+        thin |= ok
+    return thin, filled
+
+
+def road_gate(F, thin, l_cross):
+    """A8: a thin cell burns in this hour only if the flame its borrowed fuel would have is at least l_cross (m).
+    F is the dict from fields() run on the filled fuel map; rate, fli and kind are edited in place."""
+    shut = thin & ~(F["flame"] >= l_cross)
+    F["rate"] = np.where(shut, 0.0, F["rate"]); F["fli"] = np.where(shut, 0.0, F["fli"]); F["kind"] = np.where(shut, 0, F["kind"])
+    return F

@@ -120,3 +120,11 @@ Rechecked: S1 to S5 the same to the third digit; S6 to S12 and S13b pass, S13 fa
 (10 m against 5 m: area median 1.8 %, worst 11.2 %); against the whole-grid solver the burned area ratio is 1.01 at
 the median, 0.99 to 1.05. `scripts/run_fire.py` now prints progress each simulated hour and stops itself at
 `--max-minutes` (default 110), after a run on THE-COW overran a two-hour limit that an outside watcher failed to enforce.
+
+## Road rule R1 (24 Nov 2026, protocol A8)
+
+S14 passes (tests/test_roads.py): with the rule off the result is bit-identical to the old code; with L_cross = 0
+the fire passes a one-cell road line exactly as if it were grass; a two-cell line and a high L_cross stop it.
+The rule is off by default (`run_fire.py --road-cross <m>` turns it on). L_cross has no source: it is a number to
+fit on the calibration fires.
+

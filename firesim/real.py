@@ -67,6 +67,12 @@ class Fire:
         self.convergence = float(np.degrees(np.arctan2(-(x1 - x0), y1 - y0)))
         self._weather()
         self._cache = {}
+        self.l_cross = None; self.thin = np.zeros(self.fuel.shape, bool); self.fuel_road = self.fuel
+
+    def use_roads(self, l_cross):
+        """Protocol A8 road rule R1: thin non-burnable lines burn as the fuel beside them when its flame >= l_cross (m)."""
+        from .landscape import thin_barriers
+        self.l_cross = float(l_cross); self.thin, self.fuel_road = thin_barriers(self.fuel); self._cache = {}
 
     # --- coordinates: solver x, y in metres; cell (row, col) centre is at (col * cell, row * cell)
     def xy(self, lon, lat):
@@ -152,7 +158,10 @@ class Fire:
             h = min(h, self.hours - 1)
             sp, to = self.wind(h, wind_scale, wind_turn)
             m = self.moist[h]; m = (m[0] + moist_add, m[1] + moist_add, m[2] + moist_add, m[3], m[4])
-            F = fields(self.fuel, m, sp, to, self.tan, self.upslope, self.cc, self.ch, self.cbh, self.cbd, crown=crown)
+            F = fields(self.fuel_road, m, sp, to, self.tan, self.upslope, self.cc, self.ch, self.cbh, self.cbd, crown=crown)
+            if self.l_cross is not None:
+                from .landscape import road_gate
+                F = road_gate(F, self.thin, self.l_cross)
             up = lambda a, dt=np.float32: np.repeat(np.repeat(a.astype(dt), self.k, 0), self.k, 1)
             self._cache = dict(key=key, rate=up(F["rate"], np.float64), heading=up(F["heading"]), lb=up(F["lb"]),
                                fli=up(F["fli"]), wind=up(sp), wind_to=up(to), kind=F["kind"], flame=F["flame"])

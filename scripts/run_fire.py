@@ -22,6 +22,7 @@ ap.add_argument("--candidate", default="M1"); ap.add_argument("--seeds", type=in
 ap.add_argument("--max-minutes", type=float, default=110.0, help="wall-clock cap for the whole script; it stops itself")
 ap.add_argument("--wind", default="stations"); ap.add_argument("--gust-share", type=float, default=0.0)
 ap.add_argument("--wind-scale", type=float, default=1.0); ap.add_argument("--cell", type=float, default=10.0); ap.add_argument("--params")
+ap.add_argument("--road-cross", type=float, help="protocol A8 road rule R1: flame length (m) at which thin road lines burn; omitted = rule off")
 a = ap.parse_args()
 os.makedirs(a.out, exist_ok=True)
 commit = subprocess.run(["git", "rev-parse", "HEAD"], capture_output=True, text=True, cwd=os.path.dirname(os.path.abspath(__file__))).stdout.strip()
@@ -35,6 +36,9 @@ if a.wind == "hrrr":
     wind_check = fire.hrrr_vs_stations()
     for r in wind_check:
         print("HRRR against station:", r, flush=True)
+if a.road_cross is not None:
+    fire.use_roads(a.road_cross)
+    print(f"road rule R1 on: {int(fire.thin.sum())} thin cells, L_cross {a.road_cross} m", flush=True)
 params = json.load(open(a.params)) if a.params else {}
 print(f"grid {fire.ny} x {fire.nx} at {fire.cell} m, grid north is {fire.convergence:.1f} deg clockwise of true north", flush=True)
 for h in range(0, fire.hours, 3):
@@ -44,7 +48,7 @@ bx, by, barea, label, extra = fire.buildings()
 print(f"buildings {len(bx)}", flush=True)
 kw = dict(wind_scale=a.wind_scale)
 prov = fire.provider(**kw)
-burnable = fire.slice(0, **kw)["rate"] > 0
+burnable = (fire.slice(0, **kw)["rate"] > 0) & ~np.repeat(np.repeat(fire.thin, fire.k, 0), fire.k, 1)   # embers cannot light a road
 lost = np.zeros(len(bx)); t_sum = np.zeros(len(bx)); causes = np.zeros(5); arr0 = None; stats = []
 pers = fire.perimeters()
 sat = [p for p in pers if p[2] != "GeoMAC"] or pers          # A7: the latest satellite (else incident) perimeter in the window
@@ -73,7 +77,9 @@ for seed in range(a.seeds):
                       houses_lit=int(l.sum()), embers=int(sp.n_thrown), spot_fires=int(sp.n_spots)))
     print(stats[-1], flush=True)
     if fit_per is not None:
-        share += arr[fire.k // 2::fire.k, fire.k // 2::fire.k] <= fit_per[0]
+        b30 = arr[fire.k // 2::fire.k, fire.k // 2::fire.k] <= fit_per[0]
+        share += b30; stats[-1]["jaccard_fit_perimeter"] = overlap(b30, fit_per[1])[0]
+        print("  overlap at fit perimeter", stats[-1]["jaccard_fit_perimeter"], flush=True)
     if arr0 is None:
         arr0 = arr
         np.savez_compressed(os.path.join(a.out, "arrival_seed0.npz"), arrival_min=arr[fire.k // 2::fire.k, fire.k // 2::fire.k].astype(np.float32),
@@ -88,7 +94,7 @@ for mins, mask, name in pers:
                     model_km2=float((a30 <= mins).sum() * fire.res ** 2 / 1e6), jaccard=j, sorensen=s))
     print(per[-1], flush=True)
 res = dict(fire=fire.cfg["name"], role=fire.cfg["role"], candidate=a.candidate, firesim=__version__, commit=commit, dirty=dirty, seeds=a.seeds,
-           hours=T / 60, cell=fire.cell, wind_scale=a.wind_scale, wind_source=a.wind, gust_share=a.gust_share, hrrr_vs_stations=wind_check, params=params, convergence_deg=fire.convergence,
+           hours=T / 60, cell=fire.cell, wind_scale=a.wind_scale, wind_source=a.wind, gust_share=a.gust_share, road_cross=a.road_cross, hrrr_vs_stations=wind_check, params=params, convergence_deg=fire.convergence,
            weather=[dict(hour=h, temp_f=fire.met[h][0], rh=fire.met[h][1], stick=fire.met[h][2], moist=fire.moist[h]) for h in range(fire.hours)],
            runs=stats, perimeters=per, seconds=round(time.time() - t_start, 1))
 known = label >= 0
@@ -111,6 +117,10 @@ if known.any():
         area_bits = float(-(np.log2(q[m]).sum() + np.log2(1 - q[~m]).sum()))
         res["fit"] = dict(perimeter=fit_per[2], hours=fit_per[0] / 60, area_bits_per_building=area_bits / int(known.sum()),
                           score=bits + area_bits / int(known.sum()), note="protocol A7: bits per building + area bits / buildings; lower is better")
+        fb = float(np.clip(m.mean(), 0.005, 0.995)); cell0 = float(-(m.mean() * np.log2(fb) + (1 - m.mean()) * np.log2(1 - fb)))
+        res["fit"].update(bits_per_cell=area_bits / m.size, bits_per_cell_no_skill=cell0, building_ratio=bits / bits0, area_ratio=area_bits / m.size / cell0,
+                          score_a8=bits / bits0 + area_bits / m.size / cell0,
+                          note_a8="protocol A8: building bits / own-rate bits + cell bits / mapped-share bits; 2.0 = no skill, lower is better")
         print("fit", res["fit"], flush=True)
     print(res["buildings"], flush=True)
 np.savez_compressed(os.path.join(a.out, "buildings.npz"), x=bx, y=by, p_model=p_model, label=label,
