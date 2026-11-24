@@ -1,5 +1,3 @@
-  bias=(m - o).mean(), rmse=np.sqrt(((m - o) ** 2).mean()), dir_mae=np.nanmean(np.abs(A("dir_diff"))),
-  f"gust ratio median {np.nanmedian((S('hrrr_gust') / S('obs_gust'))[windy]):.2f}")
 station kind  elev  hrrr_elev  n   obs  h10  ratio  bias  rmse  dir_mae | obs_gust hrrr_gust ratio | h80/obs h850/obs
 APC     asos     8      2  44   3.8   3.0  0.78  -0.8   2.0     58 |   17.3   13.7  0.80 |  1.16  1.77
 CCR     asos     5     42  44   2.8   2.0  0.71  -0.8   2.2     29 |   11.4    8.9  0.78 |  1.45  2.25
