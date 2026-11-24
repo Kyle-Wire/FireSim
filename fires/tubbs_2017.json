@@ -30,5 +30,7 @@
                 "note": "USGS CC0 release (doi 10.5066/P1QX6UXD): the pre-fire building points. Positions go to the model; bldg_cond is used only for scoring."},
   "perimeters": [
     {"name": "GeoMAC", "file": "perimeters/progression_Historic_Geomac_Perimeters_2017.geojson", "time_field": "perimeterdatetime"}
-  ]
+  ],
+  "detections": {"file": "viirs/viirs_375m_detections.csv", "clip": "perimeters/final.geojson", "buffer_m": 500.0,
+                 "note": "NASA FIRMS VIIRS S-NPP 375 m standard detections (US government work). Clipped to the final Tubbs outline plus 500 m because the Nuns and Atlas fires burned in the same box that night. Protocol A11: reported, not part of the fitting score."}
 }

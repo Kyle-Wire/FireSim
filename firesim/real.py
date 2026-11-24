@@ -250,6 +250,35 @@ class Fire:
                 out.append((float(mins), m, p["name"]))
         return sorted(out, key=lambda v: v[0])
 
+    def detections(self):
+        """Satellite fire detections for the first-night check (protocol A11): list of (minutes after ignition,
+        rows30, cols30), one entry per overpass inside the run. Config key "detections": file (FIRMS csv with
+        latitude, longitude, acq_date, acq_time), clip (an outline file) and buffer_m, so that other fires burning
+        in the box that night are left out. Scoring only; nothing here reaches the model."""
+        d = self.cfg.get("detections")
+        if not d:
+            return []
+        import csv
+        import geopandas as gpd
+        from shapely.geometry import Point
+        from shapely.ops import unary_union
+        clip = unary_union(list(gpd.read_file(os.path.join(self.dir, d["clip"])).to_crs(self.crs).geometry)).buffer(float(d.get("buffer_m", 0.0)))
+        passes = {}
+        with open(os.path.join(self.dir, d["file"]), newline="") as fh:
+            for row in csv.DictReader(fh):
+                hhmm = str(row["acq_time"]).replace(":", "").zfill(4)
+                tt = _utc(f"{row['acq_date']}T{hhmm[:2]}:{hhmm[2:4]}:00Z")
+                mins = (tt - self.t0) / timedelta(minutes=1)
+                if mins <= 0 or mins > self.hours * 60:
+                    continue
+                x, y = self.tr.transform(float(row["longitude"]), float(row["latitude"]))
+                if not clip.contains(Point(x, y)):
+                    continue
+                r = int((y - self.bottom) // self.res); c = int((x - self.left) // self.res)
+                if 0 <= r < self.ny30 and 0 <= c < self.nx30:
+                    passes.setdefault(round(mins / 10.0) * 10.0, []).append((r, c))
+        return [(m, np.array([v[0] for v in rc]), np.array([v[1] for v in rc])) for m, rc in sorted(passes.items())]
+
 
 def overlap(model, obs):
     """Jaccard and Sorensen of two bool masks."""

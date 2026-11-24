@@ -35,7 +35,7 @@ class Spot:
     downwind that always ignites (sandbox case S7). structures: optional `Structures`.
     """
 
-    def __init__(self, cell, fli, wind, wind_to, burnable, seed=0, step_min=60.0, fixed=None, structures=None, **kw):
+    def __init__(self, cell, fli, wind, wind_to, burnable, seed=0, step_min=60.0, fixed=None, structures=None, aloft=None, i_loft=None, **kw):
         bad = set(kw) - set(PRIORS)
         if bad:
             raise TypeError(f"unknown ember parameters {bad}")
@@ -45,6 +45,9 @@ class Spot:
         sh = self.burnable.shape
         f3 = lambda v: v if callable(v) else (np.broadcast_to(np.asarray(v, np.float64), (1,) + sh) if np.ndim(v) < 3 else np.asarray(v, np.float64))
         self.fli, self.wind, self.wdir = f3(fli), f3(wind), f3(wind_to)
+        # protocol A11, option EP: (speed, direction) of the wind aloft and the intensity (MW/m) at which an ember
+        # rides it fully; below that the ember's wind is a vector blend with weight (I / i_loft)^(2/3)
+        self.aloft = None if aloft is None else (f3(aloft[0]), f3(aloft[1])); self.i_loft = i_loft
         self.rng = np.random.default_rng(seed)
         self.Lt = np.empty(0); self.Lx = np.empty(0); self.Ly = np.empty(0)
         self.n_thrown = 0; self.n_spots = 0
@@ -65,6 +68,11 @@ class Spot:
         r, c, t, i = rows[rep], cols[rep], times[rep], np.maximum(i_mw[rep], 1e-6)
         u = np.maximum(self._s(float(t.min()), self.wind)[r, c], 0.5)
         th = self._s(float(t.min()), self.wdir)[r, c]
+        if self.aloft is not None:
+            ua = self._s(float(t.min()), self.aloft[0])[r, c]; ta = self._s(float(t.min()), self.aloft[1])[r, c]
+            w = np.clip(i / self.i_loft, 0.0, 1.0) ** (2.0 / 3.0)
+            vx = (1 - w) * u * np.cos(th) + w * ua * np.cos(ta); vy = (1 - w) * u * np.sin(th) + w * ua * np.sin(ta)
+            u = np.maximum(np.hypot(vx, vy), 0.5); th = np.arctan2(vy, vx)
         p = self.p
         if self.fixed is not None:
             d = np.full(len(rep), float(self.fixed[0])); tl = t + self.fixed[1]
