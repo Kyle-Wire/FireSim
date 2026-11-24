@@ -159,73 +159,26 @@ def _crossed(arr, t, ay, ax_):
 
 
 @njit(cache=True)
-def _band(phi, tmp, burn, act, K, ay, ax_, wins, full, cell):
-    """Rebuild the narrow band: every cell within K cells of the front (a burned cell beside an unburned burnable one).
-
-    The front is looked for among the old active cells, inside the windows of new ignitions (wins: rows of y0, y1, x0, x1)
-    and, when `full`, over the whole grid. A cell entering the band carries a stale phi from long ago (far too high), so
-    it is lowered to its neighbours' phi plus the distance between them, which is what a distance to the front would be.
-    Returns the new active list.
+def _grow(phi, tmp, burn, act, K, cy, cx, cell):
+    """Add to the band every unburned cell within K cells of the cells (cy, cx) that have just caught fire, and those
+    cells themselves. Returns the cells added. The band is kept, not rebuilt: a cell stays in it until `_prune`.
     """
     ny, nx = phi.shape
-    cap = 4096
-    fy = np.empty(cap, np.int64); fx = np.empty(cap, np.int64); nf = 0
-    nold = len(ay)
-    for i in range(nold):
-        act[ay[i], ax_[i]] = 3
-    npass = nold + (1 if full else 0) + len(wins)
-    for q in range(npass):
-        if q < nold:
-            y0 = ay[q]; y1 = y0 + 1; x0 = ax_[q]; x1 = x0 + 1
-        elif full and q == nold:
-            y0 = 0; y1 = ny; x0 = 0; x1 = nx
-        else:
-            w = wins[q - nold - (1 if full else 0)]
-            y0 = w[0]; y1 = w[1]; x0 = w[2]; x1 = w[3]
-        for y in range(y0, y1):
-            for x in range(x0, x1):
-                if phi[y, x] > 0.0:
+    cap = max(1024, len(cy) * (2 * K + 1))
+    ny_ = np.empty(cap, np.int64); nx_ = np.empty(cap, np.int64); nn = 0
+    for i in range(len(cy)):
+        y0 = cy[i]; x0 = cx[i]
+        for y in range(max(y0 - K, 0), min(y0 + K + 1, ny)):
+            for x in range(max(x0 - K, 0), min(x0 + K + 1, nx)):
+                if act[y, x] != 0:
                     continue
-                isf = False
-                for dy in range(-1, 2):
-                    yy = y + dy
-                    if yy < 0 or yy >= ny:
-                        continue
-                    for dx in range(-1, 2):
-                        xx = x + dx
-                        if xx < 0 or xx >= nx:
-                            continue
-                        if phi[yy, xx] > 0.0 and burn[yy, xx]:
-                            isf = True
-                if isf:
-                    if nf == cap:
-                        cap *= 2
-                        gy = np.empty(cap, np.int64); gx = np.empty(cap, np.int64)
-                        gy[:nf] = fy[:nf]; gx[:nf] = fx[:nf]; fy = gy; fx = gx
-                    fy[nf] = y; fx[nf] = x; nf += 1
-    cap2 = max(1024, nf * (2 * K + 1) * 3)
-    oy = np.empty(cap2, np.int64); ox = np.empty(cap2, np.int64); n = 0
-    ny_ = np.empty(cap2, np.int64); nx_ = np.empty(cap2, np.int64); nn = 0
-    for i in range(nf):
-        for y in range(max(fy[i] - K, 0), min(fy[i] + K + 1, ny)):
-            for x in range(max(fx[i] - K, 0), min(fx[i] + K + 1, nx)):
-                v = act[y, x]
-                if v == 1 or v == 2:
-                    continue
-                if n == cap2:
-                    cap2 *= 2
-                    gy = np.empty(cap2, np.int64); gx = np.empty(cap2, np.int64)
-                    gy[:n] = oy[:n]; gx[:n] = ox[:n]; oy = gy; ox = gx
-                    gy = np.empty(cap2, np.int64); gx = np.empty(cap2, np.int64)
+                if phi[y, x] <= 0.0 and (abs(y - y0) > 2 or abs(x - x0) > 2):
+                    continue                   # burned cells away from this one are in the band already if they matter
+                if nn == cap:
+                    cap *= 2
+                    gy = np.empty(cap, np.int64); gx = np.empty(cap, np.int64)
                     gy[:nn] = ny_[:nn]; gx[:nn] = nx_[:nn]; ny_ = gy; nx_ = gx
-                oy[n] = y; ox[n] = x; n += 1
-                if v == 0:
-                    act[y, x] = 2; ny_[nn] = y; nx_[nn] = x; nn += 1
-                else:
-                    act[y, x] = 1
-    for i in range(nold):
-        if act[ay[i], ax_[i]] == 3:
-            act[ay[i], ax_[i]] = 0
+                act[y, x] = 2; ny_[nn] = y; nx_[nn] = x; nn += 1
     # A cell entering the band carries a phi from long ago, far too high. Give it the value the band implies: continue
     # the slope of phi from its lowest unburned neighbour already in the band (phi_1 + (phi_1 - phi_2), or phi_1 plus
     # the distance where there is no second cell). Only through fuel, so a cell behind a firebreak keeps its value.
@@ -269,7 +222,28 @@ def _band(phi, tmp, burn, act, K, ay, ax_, wins, full, cell):
                 act[y, x] = 1
     for i in range(nn):
         act[ny_[i], nx_[i]] = 1
-    return oy[:n], ox[:n]
+    return ny_[:nn], nx_[:nn]
+
+
+@njit(cache=True)
+def _prune(phi, act, ay, ax_, n):
+    """Drop from the band the burned cells with no unburned cell within two cells. Compacts (ay, ax_) in place and
+    returns the new count."""
+    ny, nx = phi.shape
+    k = 0
+    for i in range(n):
+        y = ay[i]; x = ax_[i]
+        keep = phi[y, x] > 0.0
+        if not keep:
+            for yy in range(max(y - 2, 0), min(y + 3, ny)):
+                for xx in range(max(x - 2, 0), min(x + 3, nx)):
+                    if phi[yy, xx] > 0.0:
+                        keep = True
+        if keep:
+            ay[k] = y; ax_[k] = x; k += 1
+        else:
+            act[y, x] = 0
+    return k
 
 
 def ellipse_abc(rate_head, lb):
@@ -300,7 +274,7 @@ def _light(phi, arr, rate, R, L, r, cc, t0, rad, cell):
 
 
 def arrival(rate_head, heading, lb, cell, ignitions, t_end, step_min=60.0, cfl=0.4, phi0=None, spot=None, spot_window=True,
-            band=8, refresh=6):
+            band=8, refresh=16):
     """Arrival time (minutes) per cell up to t_end.
 
     rate_head (m/min), heading (rad), lb: (ny, nx) or (T, ny, nx), one slice per `step_min`. For large fires pass
@@ -308,8 +282,9 @@ def arrival(rate_head, heading, lb, cell, ignitions, t_end, step_min=60.0, cfl=0
     ignitions: list of (row, col, minute, radius_m). spot: optional callback(t0, t1, arr, phi, rows, cols) run after
     each step (embers, structures); rows, cols are the cells that caught fire in the step. It may return new ignitions
     (row, col, minute, radius_m); these are applied inside a local window (see `_light`).
-    band: the solver works only on cells within `band` cells of the front, rebuilt every `refresh` steps (see `_band`),
-    and the time step follows the fastest cell in the band. band=None solves the whole grid every step (the reference
+    band: the solver works only on cells within `band` cells of where fire has just arrived (`_grow`), drops burned
+    cells with nothing left to burn beside them every `refresh` steps (`_prune`), and takes its time step from the
+    fastest cell in the band. band=None solves the whole grid every step (the reference
     the band is checked against in the sandbox).
     """
     if callable(rate_head):
@@ -337,10 +312,14 @@ def arrival(rate_head, heading, lb, cell, ignitions, t_end, step_min=60.0, cfl=0
     tmp = phi.copy(); k1 = np.empty_like(phi); k2 = np.empty_like(phi)
     act = np.zeros((ny, nx), np.uint8)
     if band is None:
-        ay, ax_ = (v.ravel().astype(np.int64) for v in np.mgrid[:ny, :nx])
+        ay, ax_ = (v.ravel().astype(np.int64) for v in np.mgrid[:ny, :nx]); n_act = len(ay)
     else:
-        ay = np.empty(0, np.int64); ax_ = np.empty(0, np.int64)
-    wins = []; full = phi0 is not None; since = 0; lit_y = []; lit_x = []
+        ay = np.empty(4096, np.int64); ax_ = np.empty(4096, np.int64); n_act = 0
+    lit_y = []; lit_x = []; since = 0; vmax = 0.0
+    pcy = pcx = np.empty(0, np.int64)
+    e64 = np.empty(0, np.int64)
+    if phi0 is not None:
+        ly, lx = np.nonzero(phi <= 0); lit_y.append(ly); lit_x.append(lx)
     t = pending[0][2] if pending else 0.0
     s_now = -1
     while t < t_end:
@@ -353,7 +332,7 @@ def arrival(rate_head, heading, lb, cell, ignitions, t_end, step_min=60.0, cfl=0
                 if got is not None:
                     w = got[0]
                     tmp[w[0]:w[1], w[2]:w[3]] = phi[w[0]:w[1], w[2]:w[3]]
-                    wins.append(w); lit_y.append(got[1]); lit_x.append(got[2])
+                    lit_y.append(got[1]); lit_x.append(got[2])
                 continue
             d = np.hypot(yy - r, xx - cc) * cell - max(rad, 0.5 * cell)
             lit = (d <= 0) & (arr == np.inf)
@@ -361,7 +340,7 @@ def arrival(rate_head, heading, lb, cell, ignitions, t_end, step_min=60.0, cfl=0
             a0 = ellipse_abc(get(s0)[0], get(s0)[2])[0]
             rate[lit] = a0[lit]
             phi = np.minimum(phi, d)
-            tmp[:] = phi; full = True
+            tmp[:] = phi
             ly, lx = np.nonzero(lit); lit_y.append(ly); lit_x.append(lx)
         s = min(int(t // step_min), T - 1)
         new_s = s != s_now
@@ -373,14 +352,28 @@ def arrival(rate_head, heading, lb, cell, ignitions, t_end, step_min=60.0, cfl=0
             a = np.ascontiguousarray(a); b = np.ascontiguousarray(b); c = np.ascontiguousarray(c)
             hx = np.ascontiguousarray(hx); hy = np.ascontiguousarray(hy); burn = np.ascontiguousarray(burn)
             s_now = s
-        if band is not None and (full or wins or since >= refresh or new_s):
-            ay, ax_ = _band(phi, tmp, burn, act, band, ay, ax_, np.array(wins, np.int64).reshape(-1, 4), full, float(cell))
-            wins = []; full = False; since = 0; new_s = True
-        if new_s:
-            vmax = float(Rs.max()) if band is None else (float(Rs[ay, ax_].max()) if len(ay) else 0.0)
+        ry = np.concatenate(lit_y) if lit_y else e64; rx = np.concatenate(lit_x) if lit_x else e64
+        lit_y = []; lit_x = []
+        if band is not None:
+            wy = np.concatenate([ry, pcy]) if len(pcy) else ry; wx_ = np.concatenate([rx, pcx]) if len(pcx) else rx
+            if len(wy):                                        # cells lit by an ignition, or crossed in the last step
+                gy_, gx_ = _grow(phi, tmp, burn, act, band, wy, wx_, float(cell))
+                if n_act + len(gy_) > len(ay):
+                    cap = max(2 * len(ay), n_act + len(gy_))
+                    ay = np.concatenate([ay[:n_act], np.empty(cap - n_act, np.int64)]); ax_ = np.concatenate([ax_[:n_act], np.empty(cap - n_act, np.int64)])
+                ay[n_act:n_act + len(gy_)] = gy_; ax_[n_act:n_act + len(gy_)] = gx_; n_act += len(gy_)
+                if len(gy_):
+                    vmax = max(vmax, float(Rs[gy_, gx_].max()))
+            if since >= refresh:
+                n_act = _prune(phi, act, ay, ax_, n_act); since = 0; new_s = True
+            if new_s:
+                vmax = float(Rs[ay[:n_act], ax_[:n_act]].max()) if n_act else 0.0
+        elif new_s:
+            vmax = float(Rs.max())
         nxt = min(t_end, (s + 1) * step_min if s < T - 1 else t_end)
         if pending:
             nxt = min(nxt, pending[0][2])
+        cy_ = e64; cx_ = e64
         if vmax <= 0:
             # nothing can move in this slice of the fields: wait for the next slice, the next ignition or the end
             if spot is None and not pending and s >= T - 1:
@@ -388,17 +381,15 @@ def arrival(rate_head, heading, lb, cell, ignitions, t_end, step_min=60.0, cfl=0
             dt = max(nxt - t, 1e-9) if spot is None else min(max(nxt - t, 1e-9), 1.0)
         else:
             dt = min(cfl * cell / vmax, max(nxt - t, 1e-9))
-            _heun(phi, tmp, k1, k2, a, b, c, hx, hy, float(cell), dt, t, arr, rate, ay, ax_)
+            _heun(phi, tmp, k1, k2, a, b, c, hx, hy, float(cell), dt, t, arr, rate, ay[:n_act], ax_[:n_act])
             since += 1
+            if band is not None or spot is not None:
+                cy_, cx_ = _crossed(arr, t, ay[:n_act], ax_[:n_act])
         if spot is not None:
-            ry, rx = _crossed(arr, t, ay, ax_) if vmax > 0 else (np.empty(0, np.int64), np.empty(0, np.int64))
-            if lit_y:
-                ry = np.concatenate(lit_y + [ry]); rx = np.concatenate(lit_x + [rx]); lit_y = []; lit_x = []
-            new = spot(t, t + dt, arr, phi, ry, rx)
+            new = spot(t, t + dt, arr, phi, np.concatenate([ry, cy_]) if len(ry) else cy_, np.concatenate([rx, cx_]) if len(rx) else cx_)
             if new:
                 pending.extend((r, cc, max(t0, t + dt), rad) + ((True,) if spot_window else ()) for r, cc, t0, rad in new)
                 pending.sort(key=lambda g: g[2])
-        else:
-            lit_y = []; lit_x = []
+        pcy, pcx = cy_, cx_                                    # they grow the band before the next step
         t += dt
     return arr, phi

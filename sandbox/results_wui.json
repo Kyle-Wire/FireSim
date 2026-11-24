@@ -6,9 +6,9 @@
  "S7": {
   "strip_burned": false,
   "first_behind": 8.800000000000002,
-  "launch_plus_delay": 8.744020305604852,
-  "err_min": 0.05597969439515005,
-  "step_min": 1.0,
+  "launch_plus_delay": 8.744019970347576,
+  "err_min": 0.05598002965242621,
+  "step_min": 0.4000000000000057,
   "ok": true
  },
  "S8": {
@@ -51,28 +51,28 @@
   "p_code_house0": 0.20695721109775278,
   "p_code_min": 0.20695721109775278,
   "p_code_max": 0.2069572110977529,
-  "fraction": 0.20808333333333334,
+  "fraction": 0.21008333333333332,
   "tol": 0.011094793504355759,
   "lit_with_kf0": 0,
   "ok": true
  },
  "S12": {
-  "mean_lost_1": 134.845,
-  "mean_lost_half": 130.59,
+  "mean_lost_1": 134.445,
+  "mean_lost_half": 130.395,
   "lost_factor0": 0,
   "houses": 144,
   "ok": true
  },
  "S13": {
-  "area_diff_max": 0.07949790794979084,
-  "arrival_diff_median_max": 0.000977360920160153,
-  "spots_min": 17,
+  "area_diff_max": 0.13507779349363502,
+  "arrival_diff_median_max": 0.0024659912951624507,
+  "spots_min": 19,
   "ok": false
  },
  "S13b": {
   "area_diff_max": 0.0,
-  "arrival_diff_median_max": 3.001014569736782e-06,
-  "spots_min": 17,
+  "arrival_diff_median_max": 1.7613734456745078e-05,
+  "spots_min": 19,
   "ok": true
  }
 }

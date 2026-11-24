@@ -109,3 +109,14 @@ worst 10.9 %; arrival 2.7 %). `results_synth.json` is now the band run.
 Two things learned about running it: two FireSim runs at once on the same cores slow each other about twentyfold
 (thread contention), so runs go one at a time or with `NUMBA_NUM_THREADS` set; and rebuilding the band costs about
 as much as ten steps, which is the next thing to speed up when embers light a spot fire nearly every step.
+
+## Incremental band (24 Nov 2026)
+
+The first Camp runs with embers took 53 to 131 minutes, and profiling a spot-heavy case showed three quarters of
+the time in rebuilding the band, which every new spot fire forced. The band is now kept and grown: each cell that
+catches fire adds the unburned cells within 8 cells of it (`_grow`), and every 16 steps burned cells with nothing
+unburned within two cells are dropped (`_prune`). The spot-heavy benchmark went from 75 s to 19 s.
+Rechecked: S1 to S5 the same to the third digit; S6 to S12 and S13b pass, S13 fails as before; Y1 to Y5 pass
+(10 m against 5 m: area median 1.8 %, worst 11.2 %); against the whole-grid solver the burned area ratio is 1.01 at
+the median, 0.99 to 1.05. `scripts/run_fire.py` now prints progress each simulated hour and stops itself at
+`--max-minutes` (default 110), after a run on THE-COW overran a two-hour limit that an outside watcher failed to enforce.

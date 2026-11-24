@@ -19,6 +19,7 @@ from firesim.real import Fire, overlap
 ap = argparse.ArgumentParser()
 ap.add_argument("cfg"); ap.add_argument("data"); ap.add_argument("out")
 ap.add_argument("--candidate", default="M1"); ap.add_argument("--seeds", type=int, default=1); ap.add_argument("--hours", type=float)
+ap.add_argument("--max-minutes", type=float, default=110.0, help="wall-clock cap for the whole script; it stops itself")
 ap.add_argument("--wind", default="stations"); ap.add_argument("--gust-share", type=float, default=0.0)
 ap.add_argument("--wind-scale", type=float, default=1.0); ap.add_argument("--cell", type=float, default=10.0); ap.add_argument("--params")
 a = ap.parse_args()
@@ -55,7 +56,14 @@ for seed in range(a.seeds):
         st = Structures(bx, by, barea, fire.cell, seed=seed, **params.get("houses", {}))
         sp = Spot(fire.cell, lambda s: fire.slice(s, **kw)["fli"], lambda s: fire.slice(s, **kw)["wind"], lambda s: fire.slice(s, **kw)["wind_to"],
                   burnable, seed=seed, structures=st, **params.get("embers", {}))
-    arr, _ = arrival(prov, fire.hours, None, fire.cell, fire.ignitions(), T, spot=sp)
+    def watched(t0_, t1_, arr_, phi_, r_, c_, sp=sp, state={"h": -1}):
+        if time.time() - t_start > a.max_minutes * 60:
+            raise SystemExit(f"stopped by --max-minutes {a.max_minutes} at simulated hour {t1_ / 60:.1f} of seed {seed}; nothing written for this run")
+        if int(t1_ // 60) > state["h"]:
+            state["h"] = int(t1_ // 60)
+            print(f"  seed {seed} hour {state['h']:2d}: {time.time() - t1:6.0f} s, embers {sp.n_thrown}, spot fires {sp.n_spots}", flush=True)
+        return sp(t0_, t1_, arr_, phi_, r_, c_)
+    arr, _ = arrival(prov, fire.hours, None, fire.cell, fire.ignitions(), T, spot=watched)
     l = np.isfinite(st.t_ign); lost += l; t_sum[l] += st.t_ign[l]; causes += np.bincount(st.cause[l], minlength=5)
     stats.append(dict(seed=seed, seconds=round(time.time() - t1, 1), burned_km2=float(np.isfinite(arr).sum() * fire.cell ** 2 / 1e6),
                       houses_lit=int(l.sum()), embers=int(sp.n_thrown), spot_fires=int(sp.n_spots)))
