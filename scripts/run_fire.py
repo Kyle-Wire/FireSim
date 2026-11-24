@@ -51,6 +51,7 @@ prov = fire.provider(**kw)
 burnable = (fire.slice(0, **kw)["rate"] > 0) & ~np.repeat(np.repeat(fire.thin, fire.k, 0), fire.k, 1)   # embers cannot light a road
 lost = np.zeros(len(bx)); t_sum = np.zeros(len(bx)); causes = np.zeros(5); arr0 = None; stats = []
 pers = fire.perimeters()
+pers = [p for p in pers if p[0] <= T + 1e-6]                  # only outlines inside the run window
 sat = [p for p in pers if p[2] != "GeoMAC"] or pers          # A7: the latest satellite (else incident) perimeter in the window
 fit_per = max(sat, key=lambda p: p[0]) if sat else None
 share = np.zeros((fire.ny30, fire.nx30))
