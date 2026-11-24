@@ -1,0 +1,34 @@
+{
+  "name": "Tubbs 2017",
+  "role": "calibration",
+  "folder": "tubbs_2017",
+  "ignition_utc": "2017-10-09T04:45:00Z",
+  "ignition_source": "CAL FIRE incident API, Started 2017-10-09T04:45:00Z (docs/sources/ignition/calfire_incidents_2017.json)",
+  "ignition": {"lat": 38.60895, "lon": -122.62879, "radius_m": 15.0,
+               "source": "CAL FIRE incident API record 'Tubbs Fire (Central LNU Complex)', Latitude and Longitude fields ('off of Hwy 128 and Bennett Ln, Calistoga'). An incident point, not a surveyed origin: it may be off by hundreds of metres."},
+  "hours": 44,
+  "hours_note": "Protocol amendment A9: the first mapped outlines are at 35.25, 40.9 and 43.0 h after ignition.",
+  "box": [-122.885, 38.379, -122.475, 38.757],
+  "box_note": "the final perimeter's bounding box plus 10 km (data/tubbs_2017/box.json), clipped to the downloaded LANDFIRE tile. Other fires of the same night (Nuns, Atlas) burned inside this box and are not modelled.",
+  "landfire": {"fbfm40": "landfire/LF2016_FBFM40.tif", "cc": "landfire/LF2016_CC.tif", "ch": "landfire/LF2016_CH.tif",
+               "cbh": "landfire/LF2016_CBH.tif", "cbd": "landfire/LF2016_CBD.tif", "elev": "landfire/LF2020_Elev.tif",
+               "units": {"cc": 0.01, "ch": 0.1, "cbh": 0.1, "cbd": 0.01},
+               "units_source": "data/tubbs_2017/landfire/VERSION.md: CC %, CH m x 10, CBH m x 10, CBD kg/m3 x 100"},
+  "live_moisture": [0.30, 0.60],
+  "live_moisture_note": "Scott and Burgan 2005 live scenario L1 (fully cured herbaceous 30 %, woody 60 %): an assumption for an October fire at the end of the dry season, not a measurement. Protocol amendment A5.",
+  "stations": [
+    {"id": "RSAC1", "kind": "raws", "lat": 38.4789, "lon": -122.7119, "file": "weather/raws_RSAC1_main.csv"},
+    {"id": "HWKC1", "kind": "raws", "lat": 38.7314, "lon": -122.8327, "file": "weather/raws_HWKC1_main.csv"},
+    {"id": "BGGC1", "kind": "raws", "lat": 38.8308, "lon": -122.7158, "file": "weather/raws_BGGC1_main.csv"},
+    {"id": "STS", "kind": "asos", "lat": 38.5037, "lon": -122.811, "file": "weather/asos_STS_main.csv"},
+    {"id": "O69", "kind": "asos", "lat": 38.2578, "lon": -122.6053, "file": "weather/asos_O69_main.csv"},
+    {"id": "DVO", "kind": "asos", "lat": 38.1436, "lon": -122.5561, "file": "weather/asos_DVO_main.csv"}
+  ],
+  "buildings": {"national": true, "file": "_national/usgs_building_destruction/CONUS_bldg_loss_pts_2002_2022.zip!CONUS_bldg_loss_pts_2002_2022/CONUS_bldg_loss_pts_2002_2022.shp",
+                "layer": "CONUS_bldg_loss_pts_2002_2022", "where": "Fire_ID = 'CA_2017_TUBBS'",
+                "label_field": "bldg_cond", "destroyed": ["B"], "keep": ["expos_type"], "area_m2": 150.0,
+                "note": "USGS CC0 release (doi 10.5066/P1QX6UXD): the pre-fire building points. Positions go to the model; bldg_cond is used only for scoring."},
+  "perimeters": [
+    {"name": "GeoMAC", "file": "perimeters/progression_Historic_Geomac_Perimeters_2017.geojson", "time_field": "perimeterdatetime"}
+  ]
+}
