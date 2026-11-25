@@ -1,0 +1,16 @@
+stations with files 47, inside the terrain runs' inner domain 21: ['BAB', 'CIC', 'MYV', 'OVE', 'BNGC1', 'CBXC1', 'CDEC1', 'CESC1', 'CHAC1', 'CICC1', 'CRGC1', 'CSTC1', 'HMRC1', 'JBGC1', 'LSNC1', 'ORRC1', 'PKCC1', 'PSWC1', 'QYRC1', 'RRRC1', 'SLEC1']
+hours W3 applied 12 of 24; station-hours 236
+all       w3        n  158 stations 17  rmse  3.89  median ratio  1.15  bias  0.48  dir mae   58
+all       w3_clear  n  158 stations 17  rmse  3.23  median ratio  1.08  bias  0.44  dir mae   58
+all       w3c       n  158 stations 17  rmse  4.81  median ratio  1.03  bias  0.64  dir mae   24
+all       hrrr      n  158 stations 17  rmse  3.72  median ratio  0.87  bias -1.07  dir mae   23
+windward  w3        n  119 stations 13  rmse  3.78  median ratio  1.18  bias  0.66  dir mae   60
+windward  w3_clear  n  119 stations 13  rmse  3.21  median ratio  1.16  bias  0.77  dir mae   60
+windward  w3c       n  119 stations 13  rmse  4.43  median ratio  1.07  bias  1.04  dir mae   18
+windward  hrrr      n  119 stations 13  rmse  3.19  median ratio  0.91  bias -0.72  dir mae   17
+lee       w3        n   39 stations  5  rmse  4.21  median ratio  1.07  bias -0.08  dir mae   51
+lee       w3_clear  n   39 stations  5  rmse  3.28  median ratio  0.97  bias -0.56  dir mae   51
+lee       w3c       n   39 stations  5  rmse  5.81  median ratio  0.89  bias -0.57  dir mae   42
+lee       hrrr      n   39 stations  5  rmse  4.99  median ratio  0.73  bias -2.13  dir mae   42
+A15 rule (pooled RMSE at least 10 % lower, neither class more than 10 % worse): W3 does not earn a fire test
+A16 rule (8 or more stations, pooled RMSE at least 10 % lower, neither class more than 10 % worse): W3c does not earn a fire test
