@@ -1,0 +1,97 @@
+{
+  "case": {
+    "buildings": 0,
+    "triangles": 0,
+    "max_building_m": 0.0,
+    "top_m": 13000.0,
+    "z0_inlet": 1.2000000476837158,
+    "ustar": 1.7908372105800365
+  },
+  "timings_s": {
+    "case": 1.4,
+    "mesh": 15.1,
+    "fields": 10.7,
+    "solve": 2527.4,
+    "post": 10.0
+  },
+  "mesh": {
+    "cells": 2073600,
+    "max_non_orthogonality": 36.627931,
+    "max_skewness": 1.5711445,
+    "failed_checks": 0
+  },
+  "fields": {
+    "cells": 2073600,
+    "ground_faces": 57600,
+    "focus_ground_faces": 25600
+  },
+  "solve": {
+    "startup": {
+      "iterations": 500,
+      "converged": false,
+      "diverged": false,
+      "final_initial_residuals": {
+        "Ux": 6.8909607e-06,
+        "Uy": 0.00022234748,
+        "Uz": 0.00025956434,
+        "p": 0.00074204439,
+        "k": 5.0541739e-05,
+        "epsilon": 9.6534045e-06
+      },
+      "limiter_max_pct": {
+        "limitNut": 0.0,
+        "limitU": 0.0
+      },
+      "limiter_final_cells": {
+        "limitNut": 0,
+        "limitU": 0
+      }
+    },
+    "main": {
+      "iterations": 1500,
+      "converged": false,
+      "diverged": false,
+      "final_initial_residuals": {
+        "Ux": 1.3494212e-05,
+        "Uy": 0.00049999887,
+        "Uz": 0.00059660819,
+        "p": 0.0016977432,
+        "k": 6.9304318e-05,
+        "epsilon": 2.4019402e-05
+      },
+      "limiter_max_pct": {
+        "limitNut": 0.0,
+        "limitU": 0.0
+      },
+      "limiter_final_cells": {
+        "limitNut": 0,
+        "limitU": 0
+      }
+    }
+  },
+  "post": {
+    "time": "1500",
+    "columns": 57600,
+    "levels": 36,
+    "heights_m": [
+      10.0,
+      80.0
+    ],
+    "first_centre_m_median": 9.973103195062269,
+    "speed": {
+      "10m": {
+        "p10": 5.365458802063242,
+        "p50": 8.724853586582316,
+        "p90": 14.715691136174748,
+        "max": 36.197716692198675
+      },
+      "80m": {
+        "p10": 11.460632040834343,
+        "p50": 15.882176332965493,
+        "p90": 19.63630256080478,
+        "max": 37.15077341589611
+      }
+    },
+    "file": "terrain_wind.npz"
+  }
+}
