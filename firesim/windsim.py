@@ -18,6 +18,18 @@ def _wrap(d):
     return (np.asarray(d) + 180.0) % 360.0 - 180.0
 
 
+def box_mean(xl, yl, v, size_m=3000.0):
+    """Mean of v over a size_m box around each mesh column (columns sit on a regular lattice in the run's frame)."""
+    from scipy.ndimage import uniform_filter
+    ux = np.unique(np.round(xl, 1)); step = float(np.median(np.diff(ux))) if len(ux) > 1 else 1.0
+    ix = np.rint((xl - xl.min()) / step).astype(int); iy = np.rint((yl - yl.min()) / step).astype(int)
+    g = np.zeros((iy.max() + 1, ix.max() + 1)); w = np.zeros_like(g)
+    np.add.at(g, (iy, ix), v); np.add.at(w, (iy, ix), 1.0)
+    k = 2 * int(size_m / step / 2.0) + 1                     # an odd count of cells, so the box is centred
+    num = uniform_filter(g, size=k, mode="constant"); den = uniform_filter(w, size=k, mode="constant")
+    return (num / np.maximum(den, 1e-9))[iy, ix]
+
+
 def load_run(path):
     """One WindSim terrain run as a dict: bearing_from (grid), x, y (UTM), S, turn (deg), inner and upwind masks."""
     d = np.load(path)
@@ -28,7 +40,9 @@ def load_run(path):
     ref = float(np.hypot(d["east_80m"], d["north_80m"])[up].mean())
     e, n = d["east_10m"], d["north_10m"]
     toward = np.degrees(np.arctan2(e, n))
-    return dict(bearing_from=float(d["direction_deg"]), epsg=int(d["epsg"]), x=d["x_utm"], y=d["y_utm"], S=np.hypot(e, n) / ref,
+    S = np.hypot(e, n) / ref
+    return dict(bearing_from=float(d["direction_deg"]), epsg=int(d["epsg"]), x=d["x_utm"], y=d["y_utm"], S=S,
+                Sc=S / np.maximum(box_mean(xl, yl, S), 1e-6),
                 S80=np.hypot(d["east_80m"], d["north_80m"]) / ref, ground=d["ground_m"] if "ground_m" in d.files else None,
                 turn=_wrap(toward - (float(d["direction_deg"]) + 180.0)), inner=inner, up=up, ref80=ref)
 
@@ -64,21 +78,21 @@ class TerrainWind:
         if key == self._key:
             return
         x, y = self.to_utm(GX, GY)
-        S, T, S80 = [], [], []
+        S, T, S80, Sc = [], [], [], []
         for r in self.runs:
             pts = np.c_[r["x"], r["y"]]
-            f = LinearNDInterpolator(pts, np.c_[r["S"], np.cos(np.radians(r["turn"])), np.sin(np.radians(r["turn"])), r["S80"]])
+            f = LinearNDInterpolator(pts, np.c_[r["S"], np.cos(np.radians(r["turn"])), np.sin(np.radians(r["turn"])), r["S80"], r["Sc"]])
             v = f(x, y); ok = r["inner"][cKDTree(pts).query(np.c_[np.ravel(x), np.ravel(y)])[1]].reshape(np.shape(x))
             v[~ok] = np.nan
-            S.append(v[..., 0]); T.append(np.degrees(np.arctan2(v[..., 2], v[..., 1]))); S80.append(v[..., 3])
-        self.S, self.turn, self.S80 = np.array(S), np.array(T), np.array(S80)
+            S.append(v[..., 0]); T.append(np.degrees(np.arctan2(v[..., 2], v[..., 1]))); S80.append(v[..., 3]); Sc.append(v[..., 4])
+        self.S, self.turn, self.S80, self.Sc = np.array(S), np.array(T), np.array(S80), np.array(Sc)
         mid = self.runs[len(self.runs) // 2]
         d, _ = cKDTree(np.c_[mid["x"][mid["up"]], mid["y"][mid["up"]]]).query(np.c_[np.ravel(x), np.ravel(y)])
         step = np.sqrt((mid["x"].max() - mid["x"].min()) * (mid["y"].max() - mid["y"].min()) / len(mid["x"]))
         self.ref_pts = (d < 1.5 * step).reshape(np.shape(x))   # the caller's points inside the middle run's upwind third
         self._key = key
 
-    def wind(self, GX, GY, e10, n10, e80, n80, clearing_z0=None):
+    def wind(self, GX, GY, e10, n10, e80, n80, clearing_z0=None, contrast=False):
         """10 m wind at the points: W3 where it applies, else the wind passed in. Returns (east, north, used).
         clearing_z0 (A15 note 2, station tables only): the run's 80 m wind brought down to 10 m by the log law over
         that roughness, instead of the run's own 10 m wind over its land-cover roughness."""
@@ -89,9 +103,13 @@ class TerrainWind:
         ref_speed = float(np.mean(np.hypot(e80, n80)[self.ref_pts]))
         S = self.S if clearing_z0 is None else self.S80 * np.log(10.0 / clearing_z0) / np.log(80.0 / clearing_z0)
         self.last_bearing = float(np.degrees(np.arctan2(-re, -rn)) % 360.0)
-        out = blend(self.last_bearing, ref_speed, self.bearings, S, self.turn, self.slack)
+        out = blend(self.last_bearing, 1.0 if contrast else ref_speed, self.bearings, self.Sc if contrast else S, self.turn, self.slack)
         if out is None:
             self.hours_kept += 1; return e10, n10, False
+        if contrast:                                             # out is (ratio, turned unit vector of the reference): keep HRRR's 10 m level and bearing
+            ratio = np.hypot(out[0], out[1])
+            t = np.radians(np.degrees(np.arctan2(out[0], out[1])) - (self.last_bearing + 180.0))
+            out = (ratio * (e10 * np.cos(t) + n10 * np.sin(t)), ratio * (n10 * np.cos(t) - e10 * np.sin(t)))
         ok = np.isfinite(out[0])
         self.hours_used += 1
         return np.where(ok, out[0], e10), np.where(ok, out[1], n10), True

@@ -5,7 +5,7 @@ python scripts/wind_check_w3.py fires/<fire>.json <data_root> <stations.json> <h
 Weather only: no fire outcome is read. Station-hours with an observed speed of 3 m/s or more, at stations inside
 the runs' inner domain, in hours when W3 applies. Per class (all, windward, lee): RMSE of speed, median ratio and
 mean direction error for W3, for W3 from the 80 m wind over a clearing (z0 0.1 m; reported, decides nothing) and
-for HRRR. A station-hour is lee if the ground 5 km upwind along the hour's reference bearing is more than 100 m
+for HRRR. A16 adds W3c: HRRR's own 10 m wind times S over the 3 km mean of S, with its own rule (8 stations). A station-hour is lee if the ground 5 km upwind along the hour's reference bearing is more than 100 m
 higher than the ground at the station (both from the terrain run's own ground heights).
 """
 import argparse, csv, json, os, sys
@@ -78,7 +78,8 @@ for h in range(hours):
     if not used:
         continue
     ec, nc, _ = tw.wind(PX, PY, P["ue"], P["vn"], P["ue80"], P["vn80"], clearing_z0=0.1)
-    tw.hours_used -= 1
+    ek, nk, _ = tw.wind(PX, PY, P["ue"], P["vn"], P["ue80"], P["vn80"], contrast=True)      # A16: W3c, HRRR's level with the terrain run's pattern
+    tw.hours_used -= 2
     br = np.radians(tw.last_bearing - gamma)                     # reference bearing on the UTM grid, wind from
     for i, s in enumerate(st):
         if not inside[i]:
@@ -95,7 +96,7 @@ for h in range(hours):
         dz = float(ground([s["x"] + 5000.0 * np.sin(br)], [s["y"] + 5000.0 * np.cos(br)])[0] - ground([s["x"]], [s["y"]])[0])
         ang = lambda E, N: float(np.degrees(np.arctan2(E * on - N * oe, E * oe + N * on))) if dd else np.nan
         rec.append(dict(id=s["id"], kind=s["kind"], hour=h, ref_bearing=tw.last_bearing, lee=int(dz > 100.0), upwind_rise_m=dz, obs=ob,
-                        w3=float(np.hypot(e[j], n[j])), w3_clear=float(np.hypot(ec[j], nc[j])), hrrr=float(np.hypot(P["ue"][j], P["vn"][j])),
+                        w3=float(np.hypot(e[j], n[j])), w3_clear=float(np.hypot(ec[j], nc[j])), w3c=float(np.hypot(ek[j], nk[j])), w3c_dir=ang(ek[j], nk[j]), hrrr=float(np.hypot(P["ue"][j], P["vn"][j])),
                         w3_dir=ang(e[j], n[j]), hrrr_dir=ang(P["ue"][j], P["vn"][j])))
 print(f"hours W3 applied {tw.hours_used} of {hours}; station-hours {len(rec)}")
 A = lambda rows, k_: np.array([r[k_] for r in rows], float)
@@ -105,9 +106,9 @@ for name, rows in (("all", [r for r in rec if r["obs"] >= 3.0]), ("windward", [r
     if not rows:
         print(f"{name:9s} no station-hours"); continue
     o = A(rows, "obs"); res[name] = {}
-    for m in ("w3", "w3_clear", "hrrr"):
+    for m in ("w3", "w3_clear", "w3c", "hrrr"):
         v = A(rows, m); res[name][m] = float(np.sqrt(((v - o) ** 2).mean()))
-        dkey = "hrrr_dir" if m == "hrrr" else "w3_dir"
+        dkey = {"hrrr": "hrrr_dir", "w3c": "w3c_dir"}.get(m, "w3_dir")
         print(f"{name:9s} {m:9s} n {len(rows):4d} stations {len({r['id'] for r in rows}):2d}  rmse {res[name][m]:5.2f}  median ratio {np.median(v / o):5.2f}  bias {(v - o).mean():5.2f}  dir mae {np.nanmean(np.abs(A(rows, dkey))):4.0f}")
 n_st = len({r["id"] for r in rec if r["obs"] >= 3.0})
 if n_st < 4:
@@ -115,6 +116,11 @@ if n_st < 4:
 elif "all" in res:
     ok = res["all"]["w3"] <= 0.9 * res["all"]["hrrr"] and all(res[c]["w3"] <= 1.1 * res[c]["hrrr"] for c in ("windward", "lee") if c in res)
     print(f"A15 rule (pooled RMSE at least 10 % lower, neither class more than 10 % worse): {'W3 earns a Camp fire test' if ok else 'W3 does not earn a fire test'}")
+if n_st < 8:
+    print(f"A16 rule: only {n_st} stations (8 needed): too thin to decide; W3c is not used")
+elif "all" in res:
+    ok = res["all"]["w3c"] <= 0.9 * res["all"]["hrrr"] and all(res[c]["w3c"] <= 1.1 * res[c]["hrrr"] for c in ("windward", "lee") if c in res)
+    print(f"A16 rule (8 or more stations, pooled RMSE at least 10 % lower, neither class more than 10 % worse): {'W3c earns a Camp fire test' if ok else 'W3c does not earn a fire test'}")
 if a.out and rec:
     with open(a.out, "w", newline="") as fh:
         wr = csv.DictWriter(fh, list(rec[0])); wr.writeheader(); wr.writerows(rec)

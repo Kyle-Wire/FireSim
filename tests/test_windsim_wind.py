@@ -53,3 +53,22 @@ def test_clearing_table_uses_the_80_m_wind(tmp_path):
     e, n, used = tw.wind(GX, GY, e80 * 0, n80 * 0, e80, n80, clearing_z0=0.1)
     mid = (np.abs(GX) < 3000) & (np.abs(GY) < 3000)
     assert used and np.allclose(np.hypot(e, n)[mid], 20.0 * np.log(100.0) / np.log(800.0)) and abs(tw.last_bearing - 45.0) < 1e-9
+
+
+def test_contrast_keeps_the_level_and_adds_the_pattern(tmp_path):
+    """A16, W3c: a uniform run changes nothing but the turning; a run twice as fast in one half lifts that half."""
+    p = run_file(tmp_path, 45.0, 0.5, 10.0)
+    tw = TerrainWind([p], lambda X, Y: (X + 600000.0, Y + 4400000.0))
+    GX, GY = np.meshgrid(np.arange(-7000.0, 7001.0, 1000.0), np.arange(-7000.0, 7001.0, 1000.0))
+    b = np.radians(45.0 + 180.0); e80 = np.full(GX.shape, 20 * np.sin(b)); n80 = np.full(GX.shape, 20 * np.cos(b))
+    e10 = np.full(GX.shape, 0.0); n10 = np.full(GX.shape, -4.0)       # HRRR 10 m: 4 m/s from the north
+    e, n, used = tw.wind(GX, GY, e10, n10, e80, n80, contrast=True)
+    mid = (np.abs(GX) < 3000) & (np.abs(GY) < 3000)
+    assert used and np.allclose(np.hypot(e, n)[mid], 4.0) and np.allclose(np.degrees(np.arctan2(e, n))[mid] % 360, 190.0)
+    d = dict(np.load(p)); fast = d["y_local"] > 0
+    d["east_10m"] = np.where(fast, 2.0, 1.0) * d["east_10m"]; d["north_10m"] = np.where(fast, 2.0, 1.0) * d["north_10m"]
+    np.savez(p, **d)
+    r = load_run(p); yl = d["y_local"]; far = np.abs(yl) > 2500
+    assert np.allclose(r["Sc"][far], 1.0) and r["Sc"][fast].mean() > 1.0 > r["Sc"][~fast].mean()
+    edge = np.abs(yl) < 300; inner = np.abs(d["x_local"]) < 5000       # at the step the ratio is 2 over the ratio of the two box means
+    assert np.allclose(r["Sc"][edge & fast & inner], 2.0 / (11.0 / 7.0)) and np.allclose(r["Sc"][edge & ~fast & inner], 1.0 / (10.0 / 7.0))
