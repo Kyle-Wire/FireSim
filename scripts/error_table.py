@@ -158,6 +158,10 @@ def main():
         ii = np.isfinite(tm) & (np.floor(np.where(np.isfinite(tm), tm, 0) / 60.0).astype(int) == h)
         fl[ii] = fire.coarse(int(h), wind_scale=res.get("wind_scale", 1.0))["flame"][R[ii], C[ii]]
     out["t12_flame_arr"] = fl
+    fmax = np.zeros(len(R))                                     # A23: largest head-fire surface intensity in the window (kW/m), and the canopy there
+    for h in range(int(np.clip(np.ceil(t_end / 60.0), 1, fire.hours))):
+        fmax = np.maximum(fmax, fire.coarse(h, wind_scale=res.get("wind_scale", 1.0), crown=False)["fli"][R, C])
+    out.update(t12_fli_max=fmax, t12_cbh=np.asarray(fire.cbh)[R, C], t12_cbd=np.asarray(fire.cbd)[R, C])
     out.update(t12_row=R, t12_col=C, t12_t_obs=obs[R, C], t12_t_mod=a30[R, C], t12_bld100=near[R, C])
     # ---- T3: 300 m blocks with at least 5 scored buildings
     from scipy.spatial import cKDTree
