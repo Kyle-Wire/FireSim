@@ -51,6 +51,15 @@ def _f(v):
         return np.nan
 
 
+def shef(r):
+    """A RAWS row with SHEF codes in their 6-letter form: some DCP feeds (Colorado's) send 7 letters with a trailing
+    probability code (USIRGZZ for USIRGZ); the shorter name is added where absent."""
+    for k in list(r):
+        if k and len(k) == 7 and k.endswith("Z") and k.isupper() and k[:6] not in r:
+            r[k[:6]] = r[k]
+    return r
+
+
 def read_station(path, kind):
     """Rows of (utc datetime, speed m/s at 20 ft, from-bearing deg, temp F, RH %, 10-h stick %). kind: 'asos' or 'raws'."""
     out = []
@@ -60,10 +69,11 @@ def read_station(path, kind):
                 t = datetime.strptime(r["valid"], "%Y-%m-%d %H:%M").replace(tzinfo=timezone.utc)
                 row = (t, _f(r["sknt"]) * KT / 1.15, _f(r["drct"]), _f(r["tmpf"]), _f(r["relh"]), np.nan)
             else:
+                r = shef(r)
                 if r.get("TAIRGZ", "") == "":
                     continue                                   # daily summary row
                 t = datetime.strptime(r["utc_valid"], "%Y-%m-%d %H:%M:%S").replace(tzinfo=timezone.utc)
-                row = (t, _f(r["USIRGZ"]) * MPH, _f(r["UDIRGZ"]), _f(r["TAIRGZ"]), _f(r["XRIRGZ"]), _f(r["MMIRGZ"]))
+                row = (t, _f(r["USIRGZ"]) * MPH, _f(r["UDIRGZ"]), _f(r["TAIRGZ"]), _f(r["XRIRGZ"]), _f(r.get("MMIRGZ")))   # no fuel stick in some feeds
             out.append(row)
     return out
 

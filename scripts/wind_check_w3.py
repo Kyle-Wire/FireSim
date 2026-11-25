@@ -14,6 +14,7 @@ import numpy as np
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 from firesim.windsim import TerrainWind, load_run  # noqa: E402
+from firesim.weather import shef  # noqa: E402
 
 KT, MPH = 0.514444, 0.44704
 ap = argparse.ArgumentParser()
@@ -49,6 +50,7 @@ def read(path, kind):                                           # as scripts/win
                 t = datetime.strptime(r["valid"], "%Y-%m-%d %H:%M").replace(tzinfo=timezone.utc)
                 rows.append((t, f(r.get("sknt")) * KT, f(r.get("drct"))))
             else:
+                r = shef(r)
                 if r.get("USIRGZ", "") == "":
                     continue
                 t = datetime.strptime(r["utc_valid"], "%Y-%m-%d %H:%M:%S").replace(tzinfo=timezone.utc)
