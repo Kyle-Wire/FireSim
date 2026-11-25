@@ -153,6 +153,11 @@ def main():
     from scipy.ndimage import uniform_filter
     cnt = np.zeros((fire.ny30, fire.nx30)); np.add.at(cnt, (b30r, b30c), 1.0)
     near = uniform_filter(cnt, size=7, mode="constant") * 49.0   # buildings within about 100 m (a 210 m box)
+    fl = np.full(len(R), np.nan); tm = a30[R, C]                # A22: the model's head-fire flame length (m) in the hour it arrived
+    for h in np.unique(np.floor(tm[np.isfinite(tm)] / 60.0).astype(int)):
+        ii = np.isfinite(tm) & (np.floor(np.where(np.isfinite(tm), tm, 0) / 60.0).astype(int) == h)
+        fl[ii] = fire.coarse(int(h), wind_scale=res.get("wind_scale", 1.0))["flame"][R[ii], C[ii]]
+    out["t12_flame_arr"] = fl
     out.update(t12_row=R, t12_col=C, t12_t_obs=obs[R, C], t12_t_mod=a30[R, C], t12_bld100=near[R, C])
     # ---- T3: 300 m blocks with at least 5 scored buildings
     from scipy.spatial import cKDTree
