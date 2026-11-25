@@ -6,6 +6,8 @@ Reads the run's result.json, arrival_seed0.npz and buildings.npz, the fire's out
 same inputs the model read. Writes one npz with three tables on a 300 m lattice:
   t12_*  points the record or the model shows burned by the last outline (T1 arrival and T2 reach)
   t3_*   300 m blocks with at least 5 scored buildings (no coordinates, addresses or parcel facts; a 3 km block id only)
+For a fire that starts from an outline (config key "start", A18) distance, bearing and the straight-line columns are
+measured from the outline's nearest edge cell, and points and blocks inside the start outline are left out.
 Provenance: written fresh. Scoring only: nothing here feeds back into the model.
 """
 import argparse
@@ -62,6 +64,11 @@ def columns(fire, rows, cols, t_obs, t_end, hrrr_path):
     night = ((solar < 6.0) | (solar >= 18.0)).astype(float)[:, None] * np.ones((1, n))
     crew = ((np.arange(n_all) >= 9)[:, None] & (night < 0.5)).astype(float)
     ig_r, ig_c = [v // fire.k for v in fire.ignitions()[0][:2]]
+    if fire.cfg.get("start"):                                   # A18 outline start: measure from the outline's nearest edge cell
+        sm = fire.start_mask()
+        _, (er, ec) = distance_transform_edt(~sm, return_indices=True)
+        ig_r, ig_c = er[rows, cols], ec[rows, cols]
+    ig_r = np.broadcast_to(ig_r, rows.shape); ig_c = np.broadcast_to(ig_c, rows.shape)
     dy = (rows - ig_r) * res; dx = (cols - ig_c) * res
     dist = np.maximum(np.hypot(dx, dy), res); bearing = np.arctan2(dy, dx)
     moist = np.array([fire.moist[h][0] for h in range(n_all)])[:, None] * np.ones((1, n))
@@ -90,8 +97,8 @@ def columns(fire, rows, cols, t_obs, t_end, hrrr_path):
     t2 = fire.tan ** 2
     line = {k: np.zeros(n) for k in list(cls) + ["canopy", "slope_run", "slope_any"]}
     for i in range(n):
-        m = int(max(abs(rows[i] - ig_r), abs(cols[i] - ig_c))) + 1
-        yy = np.rint(np.linspace(ig_r, rows[i], m)).astype(int); xx = np.rint(np.linspace(ig_c, cols[i], m)).astype(int)
+        m = int(max(abs(rows[i] - ig_r[i]), abs(cols[i] - ig_c[i]))) + 1
+        yy = np.rint(np.linspace(ig_r[i], rows[i], m)).astype(int); xx = np.rint(np.linspace(ig_c[i], cols[i], m)).astype(int)
         for k in cls:
             line[k][i] = cls[k][yy, xx].mean()
         line["canopy"][i] = fire.cc[yy, xx].mean()
@@ -135,6 +142,9 @@ def main():
     R, C = np.meshgrid(np.arange(s // 2, fire.ny30, s), np.arange(s // 2, fire.nx30, s), indexing="ij")
     R, C = R.ravel(), C.ravel()
     keep = ((obs[R, C] <= t_end) | (a30[R, C] <= t_end)) & (fire.fuel[R, C] != 98)
+    start = fire.start_mask() if fire.cfg.get("start") else None   # A18: points inside the start outline are left out
+    if start is not None:
+        keep &= ~start[R, C]
     R, C = R[keep], C[keep]
     out = {"t12_" + k: v for k, v in columns(fire, R, C, obs[R, C], t_end, hrrr_path).items()}
     bx, by, p_model, label = (np.load(os.path.join(a.run, "buildings.npz"))[k] for k in ("x", "y", "p_model", "label"))
@@ -151,6 +161,9 @@ def main():
     blk = (b30r // s) * 100000 + (b30c // s)
     ids, inv = np.unique(blk[known], return_inverse=True)
     nb = np.bincount(inv); ok = nb >= 5
+    if start is not None:                                       # blocks whose centre lies inside the start outline too
+        cr = np.minimum((ids // 100000) * s + s // 2, fire.ny30 - 1); cc_ = np.minimum((ids % 100000) * s + s // 2, fire.nx30 - 1)
+        ok &= ~start[cr, cc_]
     mean = lambda v: (np.bincount(inv, v[known]) / nb)[ok]
     br = (ids[ok] // 100000) * s + s // 2; bc = (ids[ok] % 100000) * s + s // 2
     br = np.minimum(br, fire.ny30 - 1); bc = np.minimum(bc, fire.nx30 - 1)
