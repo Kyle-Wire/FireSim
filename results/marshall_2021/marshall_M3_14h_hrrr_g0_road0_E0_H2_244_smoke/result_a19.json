@@ -1,0 +1,147 @@
+{
+ "fire": "Marshall 2021",
+ "run": "marshall_M3_14h_hrrr_g0_road0_E0_H2_244_smoke",
+ "protocol": "A19 rescore: outline times from the config as it now stands; no model rerun",
+ "config": "fires/marshall_2021.json",
+ "run_seeds": 1,
+ "arrival_seeds_saved": [
+  0
+ ],
+ "hours": 14.0,
+ "perimeters": [
+  {
+   "source": "NASA FEDS",
+   "hours": 2.95,
+   "after_window": false,
+   "observed_km2": 19.854,
+   "model_km2": [
+    9.6858
+   ],
+   "jaccard": [
+    0.3941298899885316
+   ],
+   "model_km2_mean": 9.6858,
+   "jaccard_mean": 0.3941298899885316
+  },
+  {
+   "source": "NASA FEDS",
+   "hours": 15.27,
+   "after_window": true,
+   "observed_km2": 25.262999999999998,
+   "model_km2": [
+    14.2767
+   ],
+   "jaccard": [
+    0.4176051111613049
+   ],
+   "model_km2_mean": 14.2767,
+   "jaccard_mean": 0.4176051111613049
+  }
+ ],
+ "hourly": [
+  {
+   "hour": 0,
+   "model_km2": [
+    0.07289999999999999
+   ]
+  },
+  {
+   "hour": 1,
+   "model_km2": [
+    4.3209
+   ]
+  },
+  {
+   "hour": 2,
+   "model_km2": [
+    7.0847999999999995
+   ]
+  },
+  {
+   "hour": 3,
+   "model_km2": [
+    9.7632
+   ]
+  },
+  {
+   "hour": 4,
+   "model_km2": [
+    11.8215
+   ]
+  },
+  {
+   "hour": 5,
+   "model_km2": [
+    14.269499999999999
+   ]
+  },
+  {
+   "hour": 6,
+   "model_km2": [
+    14.2767
+   ]
+  },
+  {
+   "hour": 7,
+   "model_km2": [
+    14.2767
+   ]
+  },
+  {
+   "hour": 8,
+   "model_km2": [
+    14.2767
+   ]
+  },
+  {
+   "hour": 9,
+   "model_km2": [
+    14.2767
+   ]
+  },
+  {
+   "hour": 10,
+   "model_km2": [
+    14.2767
+   ]
+  },
+  {
+   "hour": 11,
+   "model_km2": [
+    14.2767
+   ]
+  },
+  {
+   "hour": 12,
+   "model_km2": [
+    14.2767
+   ]
+  },
+  {
+   "hour": 13,
+   "model_km2": [
+    14.2767
+   ]
+  },
+  {
+   "hour": 14,
+   "model_km2": [
+    14.2767
+   ]
+  }
+ ],
+ "fit": {
+  "perimeter": "NASA FEDS",
+  "hours": 2.95,
+  "building_ratio": 1.3113671035058108,
+  "area_ratio": 0.9053922576683394,
+  "score_a8": 2.2167593611741503,
+  "bits_per_building": 0.5468634203234585,
+  "bits_same_fire_rate": 0.4170177968178956,
+  "area_seeds": [
+   0
+  ],
+  "building_seeds": 1,
+  "note": "protocol A8 with the last in-window outline as fit outline (A19); area part from 1 saved seed(s), building part from all 1"
+ }
+}
