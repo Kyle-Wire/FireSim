@@ -4,27 +4,112 @@
   "folder": "east_troublesome_2020",
   "ignition_utc": "2020-10-21T21:10:00Z",
   "ignition_source": "protocol A18 start from an outline: the NASA FEDS outline labelled 2020-10-21T12:00 (afternoon passes, 123.0 km2), timed by protocol A19 at its last VIIRS pass, 21:10Z 21 Oct 2020 (data/east_troublesome_2020/perimeters/progression_NASA_FEDS_passtimes.geojson)",
-  "start": {"file": "perimeters/progression_NASA_FEDS_passtimes.geojson", "time_field": "t_pass_utc", "time_utc": "2020-10-21T21:10:00Z"},
-  "ignition": {"lat": 40.18507, "lon": -106.15207, "radius_m": 0.0,
-               "source": "not an ignition: the start outline's centroid, used only as the point where station weather is interpolated and for charts"},
+  "start": {
+    "file": "perimeters/progression_NASA_FEDS_passtimes.geojson",
+    "time_field": "t_pass_utc",
+    "time_utc": "2020-10-21T21:10:00Z"
+  },
+  "ignition": {
+    "lat": 40.18507,
+    "lon": -106.15207,
+    "radius_m": 0.0,
+    "source": "not an ignition: the start outline's centroid, used only as the point where station weather is interpolated and for charts"
+  },
   "hours": 43,
   "hours_note": "to 6 hours after the 23 Oct 00:00-label outline's pass time (10:00Z 23 Oct) = 16:00Z 23 Oct, 42.8 h, rounded up to whole hours (protocol A18 note of 25 Nov)",
-  "box": [-106.327, 40.056, -105.526, 40.420],
+  "box": [
+    -106.327,
+    40.056,
+    -105.526,
+    40.42
+  ],
   "box_note": "the final perimeter's bounding box plus about 5 km",
-  "landfire": {"fbfm40": "landfire/LF2016_FBFM40.tif", "cc": "landfire/LF2016_CC.tif", "ch": "landfire/LF2016_CH.tif",
-               "cbh": "landfire/LF2016_CBH.tif", "cbd": "landfire/LF2016_CBD.tif", "elev": "landfire/LF2020_Elev.tif",
-               "units": {"cc": 0.01, "ch": 0.1, "cbh": 0.1, "cbd": 0.01},
-               "units_source": "data/east_troublesome_2020/landfire/VERSION.md: LF 2016 Remap fuels (fallback), CC %, CH m x 10, CBH m x 10, CBD kg/m3 x 100"},
-  "live_moisture": [0.30, 0.60],
+  "landfire": {
+    "fbfm40": "landfire/LF2016_FBFM40.tif",
+    "cc": "landfire/LF2016_CC.tif",
+    "ch": "landfire/LF2016_CH.tif",
+    "cbh": "landfire/LF2016_CBH.tif",
+    "cbd": "landfire/LF2016_CBD.tif",
+    "elev": "landfire/LF2020_Elev.tif",
+    "units": {
+      "cc": 0.01,
+      "ch": 0.1,
+      "cbh": 0.1,
+      "cbd": 0.01
+    },
+    "units_source": "data/east_troublesome_2020/landfire/VERSION.md: LF 2016 Remap fuels (fallback), CC %, CH m x 10, CBH m x 10, CBD kg/m3 x 100"
+  },
+  "live_moisture": [
+    0.3,
+    0.6
+  ],
   "live_moisture_note": "Scott and Burgan 2005 live scenario L1 (fully cured herbaceous 30 %, woody 60 %): an assumption for late October after a drought summer, not a measurement. Protocol amendment A5.",
-  "stations": [],
-  "stations_note": "filled from data/east_troublesome_2020/weather_wide (fetch_weather_wide.py, pad 0.4) for the six stations of weather/stations.json",
-  "buildings": {"national": true, "file": "_national/usgs_building_destruction/CONUS_bldg_loss_pts_2002_2022.zip!CONUS_bldg_loss_pts_2002_2022/CONUS_bldg_loss_pts_2002_2022.shp",
-                "layer": "CONUS_bldg_loss_pts_2002_2022", "where": "Fire_ID = 'CO_2020_EAST_TROUBLESOME'",
-                "label_field": "bldg_cond", "destroyed": ["B"], "keep": ["expos_type"], "area_m2": 150.0,
-                "note": "USGS CC0 release (doi 10.5066/P1QX6UXD): the pre-fire building points. Buildings inside the start outline count as burned at minute 0 only if the model lights them; houses are reported, not part of the A18 reading."},
+  "stations": [
+    {
+      "id": "ESPC2",
+      "kind": "raws",
+      "lat": 40.3667,
+      "lon": -105.55,
+      "file": "weather_wide/raws_ESPC2.csv"
+    },
+    {
+      "id": "PCPC2",
+      "kind": "raws",
+      "lat": 40.085,
+      "lon": -106.675,
+      "file": "weather_wide/raws_PCPC2.csv"
+    },
+    {
+      "id": "WICC2",
+      "kind": "raws",
+      "lat": 40.3517,
+      "lon": -106.2153,
+      "file": "weather_wide/raws_WICC2.csv"
+    },
+    {
+      "id": "GNB",
+      "kind": "asos",
+      "lat": 40.0904,
+      "lon": -105.9113,
+      "file": "weather_wide/asos_GNB.csv"
+    },
+    {
+      "id": "20V",
+      "kind": "asos",
+      "lat": 40.0537,
+      "lon": -106.369,
+      "file": "weather_wide/asos_20V.csv"
+    },
+    {
+      "id": "0CO",
+      "kind": "asos",
+      "lat": 39.7939,
+      "lon": -105.7639,
+      "file": "weather_wide/asos_0CO.csv"
+    }
+  ],
+  "stations_note": "the six stations of data/east_troublesome_2020/weather/stations.json, read from weather_wide (fetch_weather_wide.py, pad 0.75, window ignition-3 h to +43 h)",
+  "buildings": {
+    "national": true,
+    "file": "_national/usgs_building_destruction/CONUS_bldg_loss_pts_2002_2022.zip!CONUS_bldg_loss_pts_2002_2022/CONUS_bldg_loss_pts_2002_2022.shp",
+    "layer": "CONUS_bldg_loss_pts_2002_2022",
+    "where": "Fire_ID = 'CO_2020_EAST_TROUBLESOME'",
+    "label_field": "bldg_cond",
+    "destroyed": [
+      "B"
+    ],
+    "keep": [
+      "expos_type"
+    ],
+    "area_m2": 150.0,
+    "note": "USGS CC0 release (doi 10.5066/P1QX6UXD): the pre-fire building points. Buildings inside the start outline count as burned at minute 0 only if the model lights them; houses are reported, not part of the A18 reading."
+  },
   "perimeters": [
-    {"name": "NASA FEDS", "file": "perimeters/progression_NASA_FEDS_passtimes.geojson", "time_field": "t_pass_utc",
-     "note": "protocol A19 pass times: 09:29Z 22 Oct (12.3 h, 577.7 km2), 20:51Z 22 Oct (23.7 h, 724.1), 10:00Z 23 Oct (36.8 h, 741.1)"}
+    {
+      "name": "NASA FEDS",
+      "file": "perimeters/progression_NASA_FEDS_passtimes.geojson",
+      "time_field": "t_pass_utc",
+      "note": "protocol A19 pass times: 09:29Z 22 Oct (12.3 h, 577.7 km2), 20:51Z 22 Oct (23.7 h, 724.1), 10:00Z 23 Oct (36.8 h, 741.1)"
+    }
   ]
 }
