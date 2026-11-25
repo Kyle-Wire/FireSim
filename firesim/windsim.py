@@ -21,7 +21,9 @@ def _wrap(d):
 def box_mean(xl, yl, v, size_m=3000.0):
     """Mean of v over a size_m box around each mesh column (columns sit on a regular lattice in the run's frame)."""
     from scipy.ndimage import uniform_filter
-    ux = np.unique(np.round(xl, 1)); step = float(np.median(np.diff(ux))) if len(ux) > 1 else 1.0
+    from scipy.spatial import cKDTree                         # lattice step: the median nearest-neighbour distance
+    pts = np.column_stack([xl, yl])                           # (column x has sub-metre jitter, so unique-x gaps fail)
+    step = float(np.median(cKDTree(pts).query(pts, k=2)[0][:, 1])) if len(xl) > 1 else 1.0
     ix = np.rint((xl - xl.min()) / step).astype(int); iy = np.rint((yl - yl.min()) / step).astype(int)
     g = np.zeros((iy.max() + 1, ix.max() + 1)); w = np.zeros_like(g)
     np.add.at(g, (iy, ix), v); np.add.at(w, (iy, ix), 1.0)
