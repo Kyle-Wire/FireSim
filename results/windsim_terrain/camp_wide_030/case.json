@@ -1,0 +1,31 @@
+{
+  "direction_deg": 30.0,
+  "epsg": 32610,
+  "origin": [
+    625026.6694097975,
+    4404359.193723995
+  ],
+  "datum_m": 1,
+  "half_width_m": 72000.0,
+  "top_m": 13000.0,
+  "edge_ground_m": 1709.5954925716726,
+  "z0_inlet": 1.2000000476837158,
+  "ustar": 1.7908372105800365,
+  "uref": 10.0,
+  "zref": 10.0,
+  "focus_utm": [
+    577026.6694097975,
+    4356359.193723995,
+    673026.6694097975,
+    4452359.193723995
+  ],
+  "focus_ground_z0": 0.05,
+  "focus_cell_m": 600,
+  "edge_blend_m": 4000,
+  "site_dir": "/home/kylew/windsim/runs/camp_fire_terrain_wide/site",
+  "n_buildings": 0,
+  "n_triangles": 0,
+  "max_building_m": 0.0,
+  "terrain_only": true,
+  "edge_ground_out_m": 23.12266543827134
+}
