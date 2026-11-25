@@ -66,6 +66,7 @@ blend = a.ember_wind == "blend"
 ewind = (fire.lookup("wind", **kw), fire.lookup("wind_to", **kw)) if blend else (fire.lookup("ewind", **kw), fire.lookup("ewind_to", **kw))
 ekw = dict(aloft=(fire.lookup("ewind", **kw), fire.lookup("ewind_to", **kw)), i_loft=a.loft_mw) if blend else {}
 stopped = None
+phi0 = fire.start_phi()
 for seed in range(a.seeds):
     t1 = time.time()
     if a.candidate == "M1":
@@ -84,7 +85,11 @@ for seed in range(a.seeds):
             print(f"  seed {seed} hour {state['h']:2d}: {time.time() - t1:6.0f} s, embers {sp.n_thrown}, spot fires {sp.n_spots}", flush=True)
         return sp(t0_, t1_, arr_, phi_, r_, c_)
     try:
-        arr, _ = arrival(prov, fire.hours, None, fire.cell, fire.ignitions(), T, spot=watched)
+        if phi0 is None:
+            arr, _ = arrival(prov, fire.hours, None, fire.cell, fire.ignitions(), T, spot=watched)
+        else:                                              # A18: lit over the whole start outline at minute 0
+            arr, _ = arrival(prov, fire.hours, None, fire.cell, [], T, spot=watched, phi0=phi0)
+            arr[phi0 <= 0] = 0.0
     except TimeoutError as e:                              # keep the seeds that finished; say so in the result
         print(e, flush=True)
         if seed == 0:

@@ -227,7 +227,40 @@ class Fire:
     def provider(self, **kw):
         return lambda s: (lambda d: (d["rate"], d["heading"], d["lb"]))(self.slice(s, **kw))
 
+    def start_mask(self):
+        """Protocol A18: a run that starts from a mapped outline. Config key "start": {file, and time_field + time_utc
+        (the row with that time) or nothing (every shape in the file)}; ignition_utc is that outline's time. Returns a
+        bool mask on the 30 m grid, or None when the fire starts from a point."""
+        st = self.cfg.get("start")
+        if not st:
+            return None
+        import geopandas as gpd
+        from rasterio import features
+        from rasterio.transform import from_origin
+        g = gpd.read_file(os.path.join(self.dir, st["file"])).to_crs(self.crs)
+        if st.get("time_field"):
+            t = [datetime.fromisoformat(str(v).replace("Z", "+00:00")) for v in g[st["time_field"]]]
+            t = [v if v.tzinfo else v.replace(tzinfo=timezone.utc) for v in t]
+            g = g[[abs((v - _utc(st["time_utc"])) / timedelta(minutes=1)) < 1.0 for v in t]]
+        geoms = [(q, 1) for q in g.geometry if q is not None and not q.is_empty]
+        if not geoms:
+            raise ValueError("start outline: no shape matches")
+        tf = from_origin(self.left, self.top, self.res, self.res)
+        return features.rasterize(geoms, out_shape=(self.ny30, self.nx30), transform=tf, fill=0, dtype="uint8")[::-1].astype(bool)
+
+    def start_phi(self):
+        """Signed distance (m, negative inside) to the start outline on the solver grid, or None."""
+        m = self.start_mask()
+        if m is None:
+            return None
+        from scipy.ndimage import distance_transform_edt
+        m = np.repeat(np.repeat(m, self.k, 0), self.k, 1)
+        return np.where(m, -distance_transform_edt(m), distance_transform_edt(~m)) * self.cell
+
     def ignitions(self):
+        if self.cfg.get("start"):                                # the middle of the start outline (for charts and tables)
+            rr, cc = np.nonzero(self.start_mask())
+            return [(int(rr.mean()) * self.k, int(cc.mean()) * self.k, 0.0, 0.0)]
         r, c = self.rowcol(self.cfg["ignition"]["lon"], self.cfg["ignition"]["lat"])
         return [(int(r), int(c), 0.0, float(self.cfg["ignition"].get("radius_m", 0.0)))]
 
