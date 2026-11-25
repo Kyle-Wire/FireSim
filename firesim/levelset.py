@@ -318,8 +318,9 @@ def arrival(rate_head, heading, lb, cell, ignitions, t_end, step_min=60.0, cfl=0
     lit_y = []; lit_x = []; since = 0; vmax = 0.0
     pcy = pcx = np.empty(0, np.int64)
     e64 = np.empty(0, np.int64)
-    if phi0 is not None:
-        ly, lx = np.nonzero(phi <= 0); lit_y.append(ly); lit_x.append(lx)
+    if phi0 is not None:                                    # a start from a mapped outline: all of it has burned at minute 0,
+        arr[phi <= 0] = 0.0                                  # but only its edge is burning now (the inside throws no embers)
+        ly, lx = np.nonzero((phi <= 0) & (phi > -1.5 * cell)); lit_y.append(ly); lit_x.append(lx)
     t = pending[0][2] if pending else 0.0
     s_now = -1
     while t < t_end:
