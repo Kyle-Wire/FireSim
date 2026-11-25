@@ -1,0 +1,5 @@
+NASA FEDS 2.95 h  mapped 19.9 model [9.7, 11.1, 14.1] overlap [0.411, 0.381, 0.362]
+NASA FEDS 15.27 h (after window: model end state) mapped 25.3 model [33.2, 33.2, 35.9] overlap [0.337, 0.33, 0.316]
+hourly [(0, 0.1), (1, 4.9), (2, 8.6), (3, 11.8), (4, 14.7), (5, 17.7), (6, 18.4), (7, 18.4), (8, 22.1), (9, 25.3), (10, 27.8), (11, 30.2), (12, 32.1), (13, 33.9), (14, 34.1)]
+fit {'perimeter': 'NASA FEDS', 'hours': 2.95, 'building_ratio': 1.0793269746990595, 'area_ratio': 0.858632361790741, 'score_a8': 1.9379593364898005, 'bits_per_building': 0.4500985570351263, 'bits_same_fire_rate': 0.4170177968178956, 'area_seeds': [0, 1, 2], 'building_seeds': 3, 'note': 'protocol A8 with the last in-window outline as fit outline (A19); area part from 3 saved seed(s), building part from all 3'}
+rescore rc=0

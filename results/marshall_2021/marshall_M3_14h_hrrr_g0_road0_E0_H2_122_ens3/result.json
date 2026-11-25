@@ -1,0 +1,319 @@
+{
+ "fire": "Marshall 2021",
+ "role": "calibration",
+ "candidate": "M3",
+ "firesim": "0.1.0",
+ "commit": "67c63f3f3ce632bd5284a8b2db73a7eaee255c7f",
+ "dirty": false,
+ "seeds": 3,
+ "stopped_early": null,
+ "hours": 14.0,
+ "cell": 10.0,
+ "wind_scale": 1.0,
+ "wind_source": "hrrr",
+ "gust_share": 0.0,
+ "road_cross": 0.0,
+ "hold_flame": 1.22,
+ "windsim": null,
+ "windsim_hours": null,
+ "ember_wind": "surface",
+ "loft_mw": null,
+ "hrrr_vs_stations": [
+  {
+   "station": "BTAC2",
+   "hrrr_mean": 15.172496416932747,
+   "station_mean": 7.1207085714285725,
+   "ratio": 2.130756548275477,
+   "dir_diff_deg": 41.25284813293778
+  },
+  {
+   "station": "CEKC2",
+   "hrrr_mean": NaN,
+   "station_mean": NaN,
+   "ratio": NaN,
+   "dir_diff_deg": NaN
+  },
+  {
+   "station": "ESPC2",
+   "hrrr_mean": NaN,
+   "station_mean": NaN,
+   "ratio": NaN,
+   "dir_diff_deg": NaN
+  },
+  {
+   "station": "BJC",
+   "hrrr_mean": 6.337215065363206,
+   "station_mean": 4.356769691292395,
+   "ratio": 1.454567377759032,
+   "dir_diff_deg": 7.861339920482251
+  },
+  {
+   "station": "BDU",
+   "hrrr_mean": 8.645695226497883,
+   "station_mean": 11.837717058941434,
+   "ratio": 0.7303515689258253,
+   "dir_diff_deg": -34.03990015985909
+  },
+  {
+   "station": "EIK",
+   "hrrr_mean": 4.893607324453371,
+   "station_mean": 5.757867101759283,
+   "ratio": 0.8498993182663347,
+   "dir_diff_deg": -8.626690543235457
+  }
+ ],
+ "params": {},
+ "convergence_deg": -5.536154676938802,
+ "weather": [
+  {
+   "hour": 0,
+   "temp_f": 43.741576789967425,
+   "rh": 19.83710256169077,
+   "stick": null,
+   "moist": [
+    0.04899759929135573,
+    0.060890220478577985,
+    0.06899759929135572,
+    0.3,
+    0.6
+   ]
+  },
+  {
+   "hour": 1,
+   "temp_f": 43.837094524425375,
+   "rh": 21.421267335606693,
+   "stick": null,
+   "moist": [
+    0.05159550769997903,
+    0.06411868918055647,
+    0.07159550769997904,
+    0.3,
+    0.6
+   ]
+  },
+  {
+   "hour": 2,
+   "temp_f": 43.721442182353435,
+   "rh": 21.111277019935056,
+   "stick": null,
+   "moist": [
+    0.051101908238068254,
+    0.06350528402400715,
+    0.07110190823806825,
+    0.3,
+    0.6
+   ]
+  },
+  {
+   "hour": 3,
+   "temp_f": 44.25952945274465,
+   "rh": 18.92521785781536,
+   "stick": null,
+   "moist": [
+    0.047414958305571686,
+    0.05892344333119588,
+    0.06741495830557169,
+    0.3,
+    0.6
+   ]
+  },
+  {
+   "hour": 4,
+   "temp_f": 43.630064047520875,
+   "rh": 20.546939800072316,
+   "stick": null,
+   "moist": [
+    0.050185169402662544,
+    0.06236603576253209,
+    0.07018516940266255,
+    0.3,
+    0.6
+   ]
+  },
+  {
+   "hour": 5,
+   "temp_f": 41.266968940282716,
+   "rh": 24.58335708353519,
+   "stick": null,
+   "moist": [
+    0.057201377041852755,
+    0.07108520642094324,
+    0.07720137704185276,
+    0.3,
+    0.6
+   ]
+  },
+  {
+   "hour": 6,
+   "temp_f": 40.73279795889483,
+   "rh": 26.17490865440864,
+   "stick": null,
+   "moist": [
+    0.05990732706481906,
+    0.0744479404300664,
+    0.07990732706481907,
+    0.3,
+    0.6
+   ]
+  },
+  {
+   "hour": 7,
+   "temp_f": 40.235939540839645,
+   "rh": 28.12408609765343,
+   "stick": null,
+   "moist": [
+    0.0631973584241609,
+    0.07853652309021936,
+    0.0831973584241609,
+    0.3,
+    0.6
+   ]
+  },
+  {
+   "hour": 8,
+   "temp_f": 40.58988844718028,
+   "rh": 27.49864182739498,
+   "stick": null,
+   "moist": [
+    0.062112053906836856,
+    0.07718779514636037,
+    0.08211205390683686,
+    0.3,
+    0.6
+   ]
+  },
+  {
+   "hour": 9,
+   "temp_f": 40.14197820195471,
+   "rh": 28.49769575738393,
+   "stick": null,
+   "moist": [
+    0.06382778300906655,
+    0.079319963351073,
+    0.08382778300906654,
+    0.3,
+    0.6
+   ]
+  },
+  {
+   "hour": 10,
+   "temp_f": 39.64511978389952,
+   "rh": 30.982823836851892,
+   "stick": null,
+   "moist": [
+    0.06800165168810036,
+    0.0845069069522024,
+    0.08800165168810035,
+    0.3,
+    0.6
+   ]
+  },
+  {
+   "hour": 11,
+   "temp_f": 38.845085621074816,
+   "rh": 35.422766949158394,
+   "stick": null,
+   "moist": [
+    0.07544536359922899,
+    0.09375734505535252,
+    0.09544536359922898,
+    0.3,
+    0.6
+   ]
+  },
+  {
+   "hour": 12,
+   "temp_f": 39.16300989732906,
+   "rh": 34.39718970677635,
+   "stick": null,
+   "moist": [
+    0.07370568313083327,
+    0.09159541204608405,
+    0.09370568313083327,
+    0.3,
+    0.6
+   ]
+  },
+  {
+   "hour": 13,
+   "temp_f": 38.555068168533346,
+   "rh": 36.46219114714042,
+   "stick": null,
+   "moist": [
+    0.07720363074378217,
+    0.0959423760699429,
+    0.09720363074378216,
+    0.3,
+    0.6
+   ]
+  }
+ ],
+ "runs": [
+  {
+   "seed": 0,
+   "seconds": 18.1,
+   "burned_km2": 33.1731,
+   "houses_lit": 832,
+   "embers": 17890,
+   "spot_fires": 983,
+   "jaccard_fit_perimeter": 0.4113322729031426
+  },
+  {
+   "seed": 1,
+   "seconds": 20.7,
+   "burned_km2": 33.191,
+   "houses_lit": 865,
+   "embers": 18709,
+   "spot_fires": 936,
+   "jaccard_fit_perimeter": 0.3810976833821817
+  },
+  {
+   "seed": 2,
+   "seconds": 19.9,
+   "burned_km2": 35.8747,
+   "houses_lit": 783,
+   "embers": 17431,
+   "spot_fires": 965,
+   "jaccard_fit_perimeter": 0.36244273707751684
+  }
+ ],
+ "perimeters": [
+  {
+   "source": "NASA FEDS",
+   "hours": 2.95,
+   "observed_km2": 19.854,
+   "model_km2": 9.6921,
+   "jaccard": 0.4113322729031426,
+   "sorensen": 0.5828992658929605
+  }
+ ],
+ "detections": [],
+ "seconds": 61.7,
+ "buildings": {
+  "n": 14194,
+  "destroyed_observed": 1196,
+  "destroyed_model_mean": 826.6666666666665,
+  "bits_per_building": 0.4500985570351263,
+  "bits_same_fire_rate": 0.4170177968178956,
+  "auc": 0.7600447663417217,
+  "cause_share": {
+   "flame": 0.5306451612903226,
+   "ember": 0.02943548387096774,
+   "neighbour": 0.4399193548387097
+  },
+  "note": "bits_same_fire_rate uses this fire's own destroyed fraction (not baseline B0, which uses the calibration fires' pooled fraction)"
+ },
+ "fit": {
+  "perimeter": "NASA FEDS",
+  "hours": 2.95,
+  "area_bits_per_building": 7.473529935336107,
+  "score": 7.9236284923712335,
+  "note": "protocol A7: bits per building + area bits / buildings; lower is better",
+  "bits_per_cell": 0.26204838813007825,
+  "bits_per_cell_no_skill": 0.305192769095678,
+  "building_ratio": 1.0793269746990595,
+  "area_ratio": 0.858632361790741,
+  "score_a8": 1.9379593364898005,
+  "note_a8": "protocol A8: building bits / own-rate bits + cell bits / mapped-share bits; 2.0 = no skill, lower is better"
+ }
+}
