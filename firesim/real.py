@@ -239,9 +239,9 @@ class Fire:
         from rasterio.transform import from_origin
         g = gpd.read_file(os.path.join(self.dir, st["file"])).to_crs(self.crs)
         if st.get("time_field"):
-            t = [datetime.fromisoformat(str(v).replace("Z", "+00:00")) for v in g[st["time_field"]]]
-            t = [v if v.tzinfo else v.replace(tzinfo=timezone.utc) for v in t]
-            g = g[[abs((v - _utc(st["time_utc"])) / timedelta(minutes=1)) < 1.0 for v in t]]
+            t = [None if v is None or str(v) in ("", "None", "nan", "NaT") else datetime.fromisoformat(str(v).replace("Z", "+00:00")) for v in g[st["time_field"]]]
+            t = [v if v is None or v.tzinfo else v.replace(tzinfo=timezone.utc) for v in t]
+            g = g[[v is not None and abs((v - _utc(st["time_utc"])) / timedelta(minutes=1)) < 1.0 for v in t]]
         geoms = [(q, 1) for q in g.geometry if q is not None and not q.is_empty]
         if not geoms:
             raise ValueError("start outline: no shape matches")
@@ -290,12 +290,14 @@ class Fire:
         tf = from_origin(self.left, self.top, self.res, self.res)
         for p in self.cfg["perimeters"]:
             g = gpd.read_file(os.path.join(self.dir, p["file"])).to_crs(self.crs)
-            if p.get("time_field"):
-                t = [datetime.fromisoformat(str(v).replace("Z", "+00:00")) for v in g[p["time_field"]]]
-                t = [v if v.tzinfo else v.replace(tzinfo=timezone.utc) for v in t]
+            if p.get("time_field"):                         # A19: an outline with no time (null) is not scored
+                t = [None if v is None or str(v) in ("", "None", "nan", "NaT") else datetime.fromisoformat(str(v).replace("Z", "+00:00")) for v in g[p["time_field"]]]
+                t = [v if v is None or v.tzinfo else v.replace(tzinfo=timezone.utc) for v in t]
             else:
                 t = [_utc(p["time_utc"])] * len(g)
             for geom, tt in zip(g.geometry, t):
+                if tt is None:
+                    continue
                 mins = (tt - self.t0) / timedelta(minutes=1)
                 if geom is None or geom.is_empty or mins <= 0 or mins > self.hours * 60 + p.get("slack_min", 0):
                     continue

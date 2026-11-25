@@ -1,0 +1,34 @@
+{
+  "name": "Marshall 2021",
+  "role": "calibration",
+  "folder": "marshall_2021",
+  "ignition_utc": "2021-12-30T18:08:00Z",
+  "ignition_source": "Juliano et al. 2023, Geophysical Research Letters 50, e2022GL101557 (CC BY): 'two reported initial ignition points, occurring at 18:08 and 19:00 UTC'; the first time is used (protocol A18)",
+  "ignition": {"lat": 39.95102, "lon": -105.23168, "radius_m": 150.0,
+               "source": "derived, not surveyed: 200 m due south of the OpenStreetMap position of the Marshall Mesa Trailhead (way 52431306, ODbL), from the Boulder County Sheriff's Office release of 8 Jun 2023 placing the second fire 'just south of the Marshall Mesa Trailhead'; uncertainty about 200 m; one ignition lit at the first fire's time (data/marshall_2021/ignition/SOURCE.md, protocol A18)"},
+  "hours": 14,
+  "box": [-105.292, 39.884, -105.073, 40.031],
+  "box_note": "the final perimeter's bounding box plus about 5 km",
+  "landfire": {"fbfm40": "landfire/LF2020_FBFM40.tif", "cc": "landfire/LF2020_CC.tif", "ch": "landfire/LF2020_CH.tif",
+               "cbh": "landfire/LF2020_CBH.tif", "cbd": "landfire/LF2020_CBD.tif", "elev": "landfire/LF2020_Elev.tif",
+               "units": {"cc": 0.01, "ch": 0.1, "cbh": 0.1, "cbd": 0.01},
+               "units_source": "data/marshall_2021/landfire/VERSION.md: LF 2020 (LF 2.2.0) fuels; CC %, CH m x 10, CBH m x 10, CBD kg/m3 x 100"},
+  "live_moisture": [0.30, 0.60],
+  "live_moisture_note": "Scott and Burgan 2005 live scenario L1 (fully cured herbaceous 30 %, woody 60 %): an assumption for dormant winter grass and shrubs after a dry autumn, not a measurement. Protocol amendment A5.",
+  "stations": [
+    {"id": "BTAC2", "kind": "raws", "lat": 40.0181, "lon": -105.3614, "file": "weather/raws_BTAC2_main.csv"},
+    {"id": "CEKC2", "kind": "raws", "lat": 39.64, "lon": -105.4647, "file": "weather/raws_CEKC2_main.csv"},
+    {"id": "ESPC2", "kind": "raws", "lat": 40.3667, "lon": -105.55, "file": "weather/raws_ESPC2_main.csv"},
+    {"id": "BJC", "kind": "asos", "lat": 39.9088, "lon": -105.1172, "file": "weather/asos_BJC_main.csv"},
+    {"id": "BDU", "kind": "asos", "lat": 40.0394, "lon": -105.2258, "file": "weather/asos_BDU_main.csv"},
+    {"id": "EIK", "kind": "asos", "lat": 40.0102, "lon": -105.048, "file": "weather/asos_EIK_main.csv"}
+  ],
+  "buildings": {"national": true, "file": "_national/usgs_building_destruction/CONUS_bldg_loss_pts_2002_2022.zip!CONUS_bldg_loss_pts_2002_2022/CONUS_bldg_loss_pts_2002_2022.shp",
+                "layer": "CONUS_bldg_loss_pts_2002_2022", "where": "Fire_ID = 'CO_2021_MARSHALL'",
+                "label_field": "bldg_cond", "destroyed": ["B"], "keep": ["expos_type"], "area_m2": 150.0,
+                "note": "USGS CC0 release (doi 10.5066/P1QX6UXD): the pre-fire building points, so embers and houses act as in Camp. Houses are NOT scored in the A18 reading; the building output is stored for a later amendment."},
+  "perimeters": [
+    {"name": "NASA FEDS", "file": "perimeters/progression_NASA_FEDS_passtimes.geojson", "time_field": "t_pass_utc", "slack_min": 90,
+     "note": "protocol A19: FEDS outlines timed at the last VIIRS pass in their half-day (21:05Z 30 Dec = 2.95 h; 09:24Z 31 Dec = 15.27 h, 1.27 h after the window, scored only by scripts/rescore.py against the model's end state)"}
+  ]
+}

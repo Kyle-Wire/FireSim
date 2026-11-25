@@ -29,6 +29,7 @@
                 "note": "USGS CC0 release (doi 10.5066/P1QX6UXD): the pre-fire building points. Positions go to the model; bldg_cond is used only for scoring."},
   "perimeters": [
     {"name": "GeoMAC", "file": "perimeters/progression_Historic_Geomac_Perimeters_2018.geojson", "time_field": "perimeterdatetime"},
-    {"name": "NASA FEDS", "file": "perimeters/progression_NASA_FEDS_archive.geojson", "time_field": "t"}
+    {"name": "NASA FEDS", "file": "perimeters/progression_NASA_FEDS_passtimes.geojson", "time_field": "t_pass_utc",
+     "note": "protocol A19: FEDS outlines timed at the last VIIRS pass in their half-day (21:30Z 8 Nov = 6.95 h; 10:38Z 9 Nov = 20.08 h; 22:01Z 9 Nov = 31.5 h, outside the window); was the half-day label t before A19"}
   ]
 }

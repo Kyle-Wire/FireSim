@@ -106,7 +106,8 @@ for seed in range(a.seeds):
         print("  overlap at fit perimeter", stats[-1]["jaccard_fit_perimeter"], flush=True)
     if arr0 is None:
         arr0 = arr
-        np.savez_compressed(os.path.join(a.out, "arrival_seed0.npz"), arrival_min=arr[fire.k // 2::fire.k, fire.k // 2::fire.k].astype(np.float32),
+    if True:                                               # every seed's arrival (A19: rescoring needs all seeds)
+        np.savez_compressed(os.path.join(a.out, f"arrival_seed{seed}.npz"), arrival_min=arr[fire.k // 2::fire.k, fire.k // 2::fire.k].astype(np.float32),
                             left=fire.left, bottom=fire.bottom, res=fire.res, crs=str(fire.crs))
 p_model = lost / a.seeds
 # ---- scoring: nothing below feeds back into the model
