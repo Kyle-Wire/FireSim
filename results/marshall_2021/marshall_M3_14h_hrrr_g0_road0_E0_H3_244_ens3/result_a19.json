@@ -1,0 +1,189 @@
+{
+ "fire": "Marshall 2021",
+ "run": "marshall_M3_14h_hrrr_g0_road0_E0_H3_244_ens3",
+ "protocol": "A19 rescore: outline times from the config as it now stands; no model rerun",
+ "config": "fires/marshall_2021.json",
+ "run_seeds": 3,
+ "arrival_seeds_saved": [
+  0,
+  1,
+  2
+ ],
+ "hours": 14.0,
+ "perimeters": [
+  {
+   "source": "NASA FEDS",
+   "hours": 2.95,
+   "after_window": false,
+   "observed_km2": 19.854,
+   "model_km2": [
+    11.6703,
+    16.0506,
+    12.6999
+   ],
+   "jaccard": [
+    0.47955563064965784,
+    0.4517467248908297,
+    0.45195086705202314
+   ],
+   "model_km2_mean": 13.4736,
+   "jaccard_mean": 0.4610844075308369
+  },
+  {
+   "source": "NASA FEDS",
+   "hours": 15.27,
+   "after_window": true,
+   "observed_km2": 25.262999999999998,
+   "model_km2": [
+    23.7816,
+    25.1622,
+    23.5674
+   ],
+   "jaccard": [
+    0.47760303687635575,
+    0.5014068655036579,
+    0.4899763827099467
+   ],
+   "model_km2_mean": 24.1704,
+   "jaccard_mean": 0.48966209502998675
+  }
+ ],
+ "hourly": [
+  {
+   "hour": 0,
+   "model_km2": [
+    0.07289999999999999,
+    0.07289999999999999,
+    0.07289999999999999
+   ]
+  },
+  {
+   "hour": 1,
+   "model_km2": [
+    4.9113,
+    6.2442,
+    5.481
+   ]
+  },
+  {
+   "hour": 2,
+   "model_km2": [
+    8.7012,
+    11.740499999999999,
+    8.504999999999999
+   ]
+  },
+  {
+   "hour": 3,
+   "model_km2": [
+    11.844,
+    16.2792,
+    12.8844
+   ]
+  },
+  {
+   "hour": 4,
+   "model_km2": [
+    16.9047,
+    20.3706,
+    17.4168
+   ]
+  },
+  {
+   "hour": 5,
+   "model_km2": [
+    21.249,
+    22.9158,
+    21.345299999999998
+   ]
+  },
+  {
+   "hour": 6,
+   "model_km2": [
+    23.7546,
+    25.119899999999998,
+    23.546699999999998
+   ]
+  },
+  {
+   "hour": 7,
+   "model_km2": [
+    23.7699,
+    25.146,
+    23.5539
+   ]
+  },
+  {
+   "hour": 8,
+   "model_km2": [
+    23.7816,
+    25.1613,
+    23.5656
+   ]
+  },
+  {
+   "hour": 9,
+   "model_km2": [
+    23.7816,
+    25.1622,
+    23.5656
+   ]
+  },
+  {
+   "hour": 10,
+   "model_km2": [
+    23.7816,
+    25.1622,
+    23.5656
+   ]
+  },
+  {
+   "hour": 11,
+   "model_km2": [
+    23.7816,
+    25.1622,
+    23.5656
+   ]
+  },
+  {
+   "hour": 12,
+   "model_km2": [
+    23.7816,
+    25.1622,
+    23.566499999999998
+   ]
+  },
+  {
+   "hour": 13,
+   "model_km2": [
+    23.7816,
+    25.1622,
+    23.5674
+   ]
+  },
+  {
+   "hour": 14,
+   "model_km2": [
+    23.7816,
+    25.1622,
+    23.5674
+   ]
+  }
+ ],
+ "fit": {
+  "perimeter": "NASA FEDS",
+  "hours": 2.95,
+  "building_ratio": 1.1486237681777587,
+  "area_ratio": 0.7316223728821527,
+  "score_a8": 1.8802461410599114,
+  "bits_per_building": 0.4789965531781582,
+  "bits_same_fire_rate": 0.4170177968178956,
+  "area_seeds": [
+   0,
+   1,
+   2
+  ],
+  "building_seeds": 3,
+  "note": "protocol A8 with the last in-window outline as fit outline (A19); area part from 3 saved seed(s), building part from all 3"
+ }
+}
