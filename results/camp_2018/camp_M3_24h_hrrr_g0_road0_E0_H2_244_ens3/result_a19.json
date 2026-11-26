@@ -1,0 +1,305 @@
+{
+ "fire": "Camp 2018",
+ "run": "camp_M3_24h_hrrr_g0_road0_E0_H2_244_ens3",
+ "protocol": "A19 rescore: outline times from the config as it now stands; no model rerun",
+ "config": "fires/camp_2018.json",
+ "run_seeds": 3,
+ "arrival_seeds_saved": [
+  0,
+  1,
+  2
+ ],
+ "hours": 24.0,
+ "perimeters": [
+  {
+   "source": "GeoMAC",
+   "hours": 3.35,
+   "after_window": false,
+   "observed_km2": 221.6817,
+   "model_km2": [
+    0.0009,
+    0.0009,
+    0.0009
+   ],
+   "jaccard": [
+    4.05987503704636e-06,
+    4.05987503704636e-06,
+    4.05987503704636e-06
+   ],
+   "model_km2_mean": 0.0009000000000000001,
+   "jaccard_mean": 4.05987503704636e-06
+  },
+  {
+   "source": "NASA FEDS",
+   "hours": 6.95,
+   "after_window": false,
+   "observed_km2": 165.7557,
+   "model_km2": [
+    0.0009,
+    0.0009,
+    0.0009
+   ],
+   "jaccard": [
+    5.429677531451407e-06,
+    5.429677531451407e-06,
+    5.429677531451407e-06
+   ],
+   "model_km2_mean": 0.0009000000000000001,
+   "jaccard_mean": 5.429677531451408e-06
+  },
+  {
+   "source": "GeoMAC",
+   "hours": 9.45,
+   "after_window": false,
+   "observed_km2": 285.1299,
+   "model_km2": [
+    0.0009,
+    0.0009,
+    0.0009
+   ],
+   "jaccard": [
+    3.156456057396997e-06,
+    3.156456057396997e-06,
+    3.156456057396997e-06
+   ],
+   "model_km2_mean": 0.0009000000000000001,
+   "jaccard_mean": 3.1564560573969966e-06
+  },
+  {
+   "source": "NASA FEDS",
+   "hours": 20.08,
+   "after_window": false,
+   "observed_km2": 331.074,
+   "model_km2": [
+    0.0009,
+    0.0009,
+    0.0009
+   ],
+   "jaccard": [
+    2.718425487957375e-06,
+    2.718425487957375e-06,
+    2.718425487957375e-06
+   ],
+   "model_km2_mean": 0.0009000000000000001,
+   "jaccard_mean": 2.7184254879573754e-06
+  }
+ ],
+ "hourly": [
+  {
+   "hour": 0,
+   "model_km2": [
+    0.0009,
+    0.0009,
+    0.0009
+   ]
+  },
+  {
+   "hour": 1,
+   "model_km2": [
+    0.0009,
+    0.0009,
+    0.0009
+   ]
+  },
+  {
+   "hour": 2,
+   "model_km2": [
+    0.0009,
+    0.0009,
+    0.0009
+   ]
+  },
+  {
+   "hour": 3,
+   "model_km2": [
+    0.0009,
+    0.0009,
+    0.0009
+   ]
+  },
+  {
+   "hour": 4,
+   "model_km2": [
+    0.0009,
+    0.0009,
+    0.0009
+   ]
+  },
+  {
+   "hour": 5,
+   "model_km2": [
+    0.0009,
+    0.0009,
+    0.0009
+   ]
+  },
+  {
+   "hour": 6,
+   "model_km2": [
+    0.0009,
+    0.0009,
+    0.0009
+   ]
+  },
+  {
+   "hour": 7,
+   "model_km2": [
+    0.0009,
+    0.0009,
+    0.0009
+   ]
+  },
+  {
+   "hour": 8,
+   "model_km2": [
+    0.0009,
+    0.0009,
+    0.0009
+   ]
+  },
+  {
+   "hour": 9,
+   "model_km2": [
+    0.0009,
+    0.0009,
+    0.0009
+   ]
+  },
+  {
+   "hour": 10,
+   "model_km2": [
+    0.0009,
+    0.0009,
+    0.0009
+   ]
+  },
+  {
+   "hour": 11,
+   "model_km2": [
+    0.0009,
+    0.0009,
+    0.0009
+   ]
+  },
+  {
+   "hour": 12,
+   "model_km2": [
+    0.0009,
+    0.0009,
+    0.0009
+   ]
+  },
+  {
+   "hour": 13,
+   "model_km2": [
+    0.0009,
+    0.0009,
+    0.0009
+   ]
+  },
+  {
+   "hour": 14,
+   "model_km2": [
+    0.0009,
+    0.0009,
+    0.0009
+   ]
+  },
+  {
+   "hour": 15,
+   "model_km2": [
+    0.0009,
+    0.0009,
+    0.0009
+   ]
+  },
+  {
+   "hour": 16,
+   "model_km2": [
+    0.0009,
+    0.0009,
+    0.0009
+   ]
+  },
+  {
+   "hour": 17,
+   "model_km2": [
+    0.0009,
+    0.0009,
+    0.0009
+   ]
+  },
+  {
+   "hour": 18,
+   "model_km2": [
+    0.0009,
+    0.0009,
+    0.0009
+   ]
+  },
+  {
+   "hour": 19,
+   "model_km2": [
+    0.0009,
+    0.0009,
+    0.0009
+   ]
+  },
+  {
+   "hour": 20,
+   "model_km2": [
+    0.0009,
+    0.0009,
+    0.0009
+   ]
+  },
+  {
+   "hour": 21,
+   "model_km2": [
+    0.0009,
+    0.0009,
+    0.0009
+   ]
+  },
+  {
+   "hour": 22,
+   "model_km2": [
+    0.0009,
+    0.0009,
+    0.0009
+   ]
+  },
+  {
+   "hour": 23,
+   "model_km2": [
+    0.0009,
+    0.0009,
+    0.0009
+   ]
+  },
+  {
+   "hour": 24,
+   "model_km2": [
+    0.0009,
+    0.0009,
+    0.0009
+   ]
+  }
+ ],
+ "fit": {
+  "perimeter": "NASA FEDS",
+  "hours": 20.083333333333332,
+  "building_ratio": 4.244444158060807,
+  "area_ratio": 1.676797584868373,
+  "score_a8": 5.92124174292918,
+  "bits_per_building": 4.21288302731263,
+  "bits_same_fire_rate": 0.9925641309974034,
+  "area_seeds": [
+   0,
+   1,
+   2
+  ],
+  "building_seeds": 3,
+  "note": "protocol A8 with the last in-window outline as fit outline (A19); area part from 3 saved seed(s), building part from all 3"
+ }
+}
