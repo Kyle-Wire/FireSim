@@ -69,10 +69,11 @@ class Fire:
         self._cache = {}; self._coarse = {}
         self.ember_level = None; self.l_cross = None; self.l_hold = None; self.crown_rate = "r91"; self.thin = np.zeros(self.fuel.shape, bool); self.fuel_road = self.fuel
 
-    def use_hold(self, l_hold):
+    def use_hold(self, l_hold, from_hour=0):
         """Protocol A22 held-edge rule H2: in any hour a cell whose head-fire flame length is under l_hold (m) does not
-        carry fire (PMS 437: under 4 ft direct attack by hand, under 8 ft with equipment)."""
-        self.l_hold = float(l_hold); self._cache = {}; self._coarse = {}
+        carry fire (PMS 437: under 4 ft direct attack by hand, under 8 ft with equipment). A24 (H3): only in hours
+        from `from_hour` on (the end of the wind event, scripts/wind_event.py); never in the ignition hour."""
+        self.l_hold = float(l_hold); self.hold_from = max(int(from_hour), 1 if from_hour else 0); self._cache = {}; self._coarse = {}
 
     def use_crown_rate(self, name):
         """Protocol A25 setting C1: "cruz05" uses the Cruz et al. 2005 crown fire rate once a cell torches."""
@@ -114,7 +115,7 @@ class Fire:
         d = np.load(path or os.path.join(self.dir, "weather", "hrrr_f00.npz"))
         x, y = self.xy(d["lon"].ravel(), d["lat"].ravel())
         self._hrrr = dict(tri=LinearNDInterpolator(np.c_[x, y], np.zeros(len(x))), ue=d["ue"], vn=d["vn"], gust=d["gust"],
-                          **{k: d[k] for k in ("ue80", "vn80", "ue850", "vn850") if k in d.files},
+                          **{k: d[k] for k in ("ue80", "vn80", "ue850", "vn850", "ue700", "vn700") if k in d.files},
                           lead=(self.t0 - _utc(str(d["first_hour_utc"]))) / timedelta(hours=1), g=float(gust_share))
         self._cache = {}; self._coarse = {}
 
@@ -136,7 +137,7 @@ class Fire:
 
     def _hrrr_at(self, h, GX, GY, level=None):
         """True east/north wind at points. level None: 10 m wind with the gust share, brought to 20 ft.
-        level "80" or "850": the wind at 80 m above ground or at 850 hPa, as it is (protocol A10)."""
+        level "80", "850" or "700": the wind at 80 m above ground or at 850 / 700 hPa, as it is (protocols A10, A24)."""
         H = self._hrrr
         t = H["lead"] + h + 0.5                                 # middle of the fire hour, in HRRR hours
         k = int(np.clip(np.floor(t), 0, len(H["ue"]) - 2)); w = float(np.clip(t - k, 0.0, 1.0))
@@ -213,7 +214,7 @@ class Fire:
             if self.l_cross is not None:
                 from .landscape import road_gate
                 F = road_gate(F, self.thin, self.l_cross)
-            if self.l_hold is not None:                          # A22: a weak edge is held for this hour
+            if self.l_hold is not None and h >= getattr(self, "hold_from", 0):   # A22: a weak edge is held for this hour (A24: after the wind event)
                 weak = (F["rate"] > 0) & ~(F["flame"] >= self.l_hold)
                 F["rate"] = np.where(weak, 0.0, F["rate"]); F["fli"] = np.where(weak, 0.0, F["fli"]); F["kind"] = np.where(weak, 0, F["kind"])
             if len(self._coarse) >= 4:

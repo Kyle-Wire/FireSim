@@ -7,6 +7,8 @@ humidity from NOAA's open HRRR archive (hrrr.tHHz.wrfsfcf00.grib2 on noaa-hrrr-b
 range, crops to the fire box plus 0.15 degrees, turns the wind from the HRRR grid to true east/north, and writes
 <fire folder>/weather/hrrr_f00.npz: lon, lat (ny, nx); ue, vn, gust (T, ny, nx) in m/s at 10 m; tmp_k, rh; hours;
 ue80, vn80 (80 m above ground) and ue850, vn850 (850 hPa), the wind aloft that carries embers (amendment A10).
+A24: `--add 700` (after the fire and data root) fetches only the 700 hPa wind for the same hours and adds ue700, vn700
+to the existing file (at East Troublesome the 850 hPa level is under the ground).
 Needs rasterio (GDAL's GRIB driver) and pyproj.
 """
 import json, os, sys, tempfile, urllib.request
@@ -65,8 +67,41 @@ def hour(d, box):
     return (out["lon"], out["lat"], ue, vn, out["gust"], tmp, out["rh"], *al, out.get("hgt", np.full(ue.shape, np.nan)))
 
 
+def add_level(cfg, root, lev):
+    """A24: fetch U/V at `lev` hPa for every hour already in hrrr_f00.npz, turn them to true east/north on the same
+    grid, and write them into the file as ue<lev>, vn<lev>."""
+    path = os.path.join(root, cfg["folder"], "weather", "hrrr_f00.npz")
+    old = dict(np.load(path)); first = datetime.strptime(str(old["first_hour_utc"]), "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
+    lon, lat = old["lon"], old["lat"]; keys = {f"UGRD:{lev} mb": "u", f"VGRD:{lev} mb": "v"}
+    UE, VN = [], []
+    for k in range(len(old["ue"])):
+        d = first + timedelta(hours=k); url = BASE.format(d=d)
+        idx = [l.split(":") for l in get(url + ".idx").decode().splitlines()]; got = {}
+        for i, f in enumerate(idx):
+            key = f"{f[3]}:{f[4]}"
+            if key in keys and f[5].startswith("anl"):
+                end = int(idx[i + 1][1]) - 1 if i + 1 < len(idx) else ""
+                with tempfile.NamedTemporaryFile(suffix=".grib2", delete=False) as tf:
+                    tf.write(get(url, (int(f[1]), end)))
+                with rasterio.open(tf.name) as ds:
+                    tr = Transformer.from_crs("EPSG:4326", ds.crs, always_xy=True)
+                    X, Y = tr.transform(lon, lat); inv = ~ds.transform
+                    cc, rr = inv * (X, Y); rr = np.floor(rr).astype(int); cc = np.floor(cc).astype(int)
+                    got[keys[key]] = ds.read(1)[rr, cc].astype(np.float64)
+                    x1, y1 = tr.transform(lon, lat + 0.01); got["conv"] = np.arctan2(-(x1 - X), y1 - Y)
+                os.unlink(tf.name)
+        if "u" not in got or "v" not in got:
+            print(f"  no {lev} hPa wind in {url}", flush=True); UE.append(np.full(lon.shape, np.nan)); VN.append(np.full(lon.shape, np.nan)); continue
+        c = got["conv"]; UE.append(got["u"] * np.cos(c) + got["v"] * np.sin(c)); VN.append(-got["u"] * np.sin(c) + got["v"] * np.cos(c))
+        print(f"{d:%Y-%m-%d %H}Z {lev} hPa wind mean {np.hypot(UE[-1], VN[-1]).mean():.1f} m/s", flush=True)
+    old[f"ue{lev}"] = np.array(UE); old[f"vn{lev}"] = np.array(VN)
+    np.savez_compressed(path, **old); print("wrote", path, "with", f"ue{lev}, vn{lev}")
+
+
 if __name__ == "__main__":
     cfg = json.load(open(sys.argv[1])); root = sys.argv[2]
+    if len(sys.argv) > 4 and sys.argv[3] == "--add":
+        add_level(cfg, root, sys.argv[4]); sys.exit(0)
     t0 = datetime.strptime(cfg["ignition_utc"], "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
     pad = float(sys.argv[3]) if len(sys.argv) > 3 else 0.15          # degrees around the fire box; a wide pad is for the station check
     b = cfg["box"]; box = [b[0] - pad, b[1] - pad, b[2] + pad, b[3] + pad]
