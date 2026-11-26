@@ -39,14 +39,17 @@ def observed_arrival(fire, T):
     return obs, (t_end or T)
 
 
-def hourly(fire, rows, cols, n_hours, has850):
-    """Per hour and point: 10 m speed (m/s), wind angle (solver frame, blown toward), 850 hPa speed and angle."""
-    u = np.zeros((n_hours, len(rows))); to = np.zeros_like(u); ua = np.full_like(u, np.nan); toa = np.full_like(u, np.nan)
+def hourly(fire, rows, cols, n_hours, has850, has700=False):
+    """Per hour and point: 10 m speed (m/s), wind angle (solver frame, blown toward), 850 hPa speed and angle, and
+    (A24) the 700 hPa speed."""
+    u = np.zeros((n_hours, len(rows))); to = np.zeros_like(u); ua = np.full_like(u, np.nan); toa = np.full_like(u, np.nan); u7 = np.full_like(u, np.nan)
     for h in range(n_hours):
         sp, a = fire.wind(h); u[h] = sp[rows, cols] * 1.15; to[h] = a[rows, cols]          # 20 ft back to 10 m
         if has850:
             sp, a = fire.wind(h, level="850"); ua[h] = sp[rows, cols]; toa[h] = a[rows, cols]
-    return u, to, ua, toa
+        if has700:
+            u7[h] = fire.wind(h, level="700")[0][rows, cols]
+    return u, to, ua, toa, u7
 
 
 def columns(fire, rows, cols, t_obs, t_end, hrrr_path):
@@ -56,8 +59,8 @@ def columns(fire, rows, cols, t_obs, t_end, hrrr_path):
     res = fire.res; n = len(rows); out = {}
     n_all = int(np.clip(np.ceil(t_end / 60.0), 1, fire.hours))
     n_to = np.where(np.isfinite(t_obs), np.clip(np.ceil(t_obs / 60.0), 1, n_all), n_all).astype(int)
-    has850 = "ue850" in getattr(fire, "_hrrr", {})
-    u, to, ua, toa = hourly(fire, rows, cols, n_all, has850)
+    has850 = "ue850" in getattr(fire, "_hrrr", {}); has700 = "ue700" in getattr(fire, "_hrrr", {})
+    u, to, ua, toa, u7 = hourly(fire, rows, cols, n_all, has850, has700)
     hh = np.arange(n_all)[:, None]
     lon0 = fire.cfg["ignition"]["lon"]
     solar = (fire.t0.hour + fire.t0.minute / 60.0 + np.arange(n_all) + 0.5 + lon0 / 15.0) % 24.0
@@ -86,6 +89,8 @@ def columns(fire, rows, cols, t_obs, t_end, hrrr_path):
                   run=u * np.cos(to - bearing[None, :]))
     if has850:
         series.update(u850=ua, lee1=descent(1000.0), lee5=descent(5000.0))
+    if has700:                                                  # A24: 700 hPa, above the ground at every fire here
+        series.update(u700=u7)
     for suf, nn in (("_to", n_to), ("_all", np.full(n, n_all))):
         w = (hh < nn[None, :]).astype(float); ws = w.sum(0)
         for k, v in series.items():
@@ -158,6 +163,11 @@ def main():
         ii = np.isfinite(tm) & (np.floor(np.where(np.isfinite(tm), tm, 0) / 60.0).astype(int) == h)
         fl[ii] = fire.coarse(int(h), wind_scale=res.get("wind_scale", 1.0))["flame"][R[ii], C[ii]]
     out["t12_flame_arr"] = fl
+    from wind_event import cut_hour                              # A24: box 10 m wind in the hour the model arrived, and the wind event's end
+    box10 = np.array([float(fire.wind(h)[0].mean()) * 1.15 for h in range(fire.hours)])
+    cut, _, _ = cut_hour(box10)
+    hm = np.where(np.isfinite(tm), np.clip(np.floor(np.where(np.isfinite(tm), tm, 0) / 60.0), 0, fire.hours - 1), -1).astype(int)
+    out["t12_u10_marr"] = np.where(hm >= 0, box10[np.maximum(hm, 0)], np.nan)
     fmax = np.zeros(len(R))                                     # A23: largest head-fire surface intensity in the window (kW/m), and the canopy there
     for h in range(int(np.clip(np.ceil(t_end / 60.0), 1, fire.hours))):
         fmax = np.maximum(fmax, fire.coarse(h, wind_scale=res.get("wind_scale", 1.0), crown=False)["fli"][R, C])
@@ -183,7 +193,8 @@ def main():
     meta = dict(fire=fire.cfg["name"], run=os.path.basename(os.path.normpath(a.run)), firesim_commit=res.get("commit"), hours=res["hours"],
                 t_end_min=t_end, step_m=s * fire.res, points=int(len(R)), blocks=int(ok.sum()), ember_L=EMBER_L, gap_d=GAP_D,
                 outlines=[p[0] for p in fire.perimeters() if p[0] <= T + 1e-6], passes=[d[0] for d in fire.detections()],
-                has_850="t12_u850_all" in out, has_model_terrain="t12_dz_model" in out)
+                has_850="t12_u850_all" in out, has_700="t12_u700_all" in out, has_model_terrain="t12_dz_model" in out,
+                wind_event_cut_hour=int(cut), box_u10=[round(float(v), 2) for v in box10])
     os.makedirs(os.path.dirname(os.path.abspath(a.out)), exist_ok=True)
     np.savez_compressed(a.out, meta=json.dumps(meta), **out)
     both = np.isfinite(out["t12_t_obs"]) & (out["t12_t_obs"] <= t_end) & (out["t12_t_mod"] <= t_end)
