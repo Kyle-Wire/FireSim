@@ -25,6 +25,7 @@ ap.add_argument("--wind-scale", type=float, default=1.0); ap.add_argument("--cel
 ap.add_argument("--ember-wind", default="surface", choices=["surface", "80", "850", "blend"], help="protocol A10: wind that carries embers (HRRR only for 80 m and 850 hPa)")
 ap.add_argument("--loft-mw", type=float, default=20.0, help="protocol A11, with --ember-wind blend: fireline intensity (MW/m) at which embers ride the 850 hPa wind fully")
 ap.add_argument("--windsim", nargs="+", help="protocol A15, wind option W3: WindSim terrain_wind.npz files (one per inflow bearing); needs --wind hrrr")
+ap.add_argument("--crown-rate", default="r91", choices=("r91", "cruz05"), help="protocol A25: crown fire rate once a cell torches; r91 = Rothermel 1991 with Scott and Reinhardt (default), cruz05 = Cruz, Alexander and Wakimoto 2005 (setting C1)")
 ap.add_argument("--hold-flame", type=float, help="protocol A22 held-edge rule H2: flame length (m) under which a cell does not carry fire in that hour; omitted = rule off")
 ap.add_argument("--road-cross", type=float, help="protocol A8 road rule R1: flame length (m) at which thin road lines burn; omitted = rule off")
 a = ap.parse_args()
@@ -57,6 +58,9 @@ print(f"buildings {len(bx)}", flush=True)
 kw = dict(wind_scale=a.wind_scale)
 prov = fire.provider(**kw)
 burnable = (fire.slice(0, **kw)["rate"] > 0) & ~np.repeat(np.repeat(fire.thin, fire.k, 0), fire.k, 1)   # embers cannot light a road
+if a.crown_rate != "r91":
+    fire.use_crown_rate(a.crown_rate); prov = fire.provider(**kw)
+    print(f"crown rate: {a.crown_rate} (protocol A25 C1)", flush=True)
 if a.hold_flame is not None:                                   # after `burnable`: embers may still light a held cell
     fire.use_hold(a.hold_flame); prov = fire.provider(**kw)
     print(f"held-edge rule H2 on: flame under {a.hold_flame} m does not carry fire", flush=True)
@@ -130,7 +134,7 @@ for mins, dr, dc in fire.detections():                     # A11 first-night che
     det.append(dict(hours=round(mins / 60, 2), detections=int(len(dr)), share_on_modelled_fire=float(near.mean()), model_km2=float(b.sum() * fire.res ** 2 / 1e6)))
     print("detections", det[-1], flush=True)
 res = dict(fire=fire.cfg["name"], role=fire.cfg["role"], candidate=a.candidate, firesim=__version__, commit=commit, dirty=dirty, seeds=a.seeds, stopped_early=stopped,
-           hours=T / 60, cell=fire.cell, wind_scale=a.wind_scale, wind_source=a.wind, gust_share=a.gust_share, road_cross=a.road_cross, hold_flame=a.hold_flame, windsim=[os.path.basename(os.path.dirname(os.path.dirname(os.path.abspath(p)))) for p in a.windsim] if a.windsim else None,
+           hours=T / 60, cell=fire.cell, wind_scale=a.wind_scale, wind_source=a.wind, gust_share=a.gust_share, road_cross=a.road_cross, hold_flame=a.hold_flame, crown_rate=a.crown_rate, windsim=[os.path.basename(os.path.dirname(os.path.dirname(os.path.abspath(p)))) for p in a.windsim] if a.windsim else None,
            windsim_hours=dict(used=fire._ws.hours_used, kept_hrrr=fire._ws.hours_kept) if a.windsim else None, ember_wind=a.ember_wind, loft_mw=a.loft_mw if blend else None, hrrr_vs_stations=wind_check, params=params, convergence_deg=fire.convergence,
            weather=[dict(hour=h, temp_f=fire.met[h][0], rh=fire.met[h][1], stick=fire.met[h][2], moist=fire.moist[h]) for h in range(fire.hours)],
            runs=stats, perimeters=per, detections=det, seconds=round(time.time() - t_start, 1))

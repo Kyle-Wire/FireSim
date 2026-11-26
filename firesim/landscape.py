@@ -30,10 +30,12 @@ def _coeffs(fuel, moist):
 
 
 def fields(fuel_number, moist, wind_20ft, wind_to, slope_tan, upslope, canopy_cover=None, canopy_height=None,
-           cbh=None, cbd=None, crown_ratio=0.4, fmc=100.0, z_max=8.0, crown=True):
+           cbh=None, cbd=None, crown_ratio=0.4, fmc=100.0, z_max=8.0, crown=True, crown_rate="r91"):
     """All inputs (ny, nx) arrays or scalars; wind_20ft in m/s. moist: (1h, 10h, 100h, herb, woody) fractions.
     Returns dict of (ny, nx) arrays: rate (head, m/min), heading (rad), lb, flame (m), fli (kW/m), kind (0 none,
-    1 surface, 2 passive crown, 3 active crown), plus r0 and midflame wind."""
+    1 surface, 2 passive crown, 3 active crown), plus r0 and midflame wind.
+    crown_rate "r91": Rothermel 1991 with Scott and Reinhardt's crown fraction (RP-29); "cruz05": protocol A25 setting
+    C1, the Cruz, Alexander and Wakimoto 2005 rate (Can. J. For. Res. 35: 1626-1639, eqs. 1-4) once a cell torches."""
     fn = np.asarray(fuel_number)
     shp = fn.shape
     bc = lambda v: np.broadcast_to(np.asarray(v, float), shp)
@@ -100,6 +102,16 @@ def fields(fuel_number, moist, wind_20ft, wind_to, slope_tan, upslope, canopy_co
         active = torch & (r_act >= r_crit)
         cfb = np.where(active, 1.0, np.where(torch, cfb, 0.0))
         r_final = np.where(torch, rate + cfb * (r_act - rate), rate)
+        if crown_rate == "cruz05":                        # A25 C1: initiation as before, rate from Cruz et al. 2005
+            u10_kmh = np.maximum(U20 * 1.15 * 3.6, 1.0)  # 20 ft to 10 m open wind (GTR-266 p. 16), km/h
+            with np.errstate(divide="ignore", invalid="ignore"):
+                cros_a = 11.02 * u10_kmh ** 0.90 * np.maximum(cbd_a, 1e-3) ** 0.19 * np.exp(-0.17 * moist[0] * 100.0)   # eq. 3
+                cac = cros_a * cbd_a / 3.0                                                                          # eqs. 1-2
+            act_c = torch & (cac >= 1.0)
+            r_final = np.where(act_c, cros_a, np.where(torch, np.maximum(rate, cros_a * np.exp(-cac)), rate))     # eq. 4
+            cfb = np.where(act_c, 1.0, cfb); active = act_c
+        elif crown_rate != "r91":
+            raise ValueError(crown_rate)
         r_final = np.maximum(r_final, rate)
         load = cbd_a * np.maximum(ch - cbh_a, 0.0)
         i_final = np.where(torch, (hpa_si + load * H_CANOPY * cfb) * r_final / 60.0, fli)

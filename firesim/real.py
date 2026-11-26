@@ -67,12 +67,16 @@ class Fire:
         self.convergence = float(np.degrees(np.arctan2(-(x1 - x0), y1 - y0)))
         self._weather()
         self._cache = {}; self._coarse = {}
-        self.ember_level = None; self.l_cross = None; self.l_hold = None; self.thin = np.zeros(self.fuel.shape, bool); self.fuel_road = self.fuel
+        self.ember_level = None; self.l_cross = None; self.l_hold = None; self.crown_rate = "r91"; self.thin = np.zeros(self.fuel.shape, bool); self.fuel_road = self.fuel
 
     def use_hold(self, l_hold):
         """Protocol A22 held-edge rule H2: in any hour a cell whose head-fire flame length is under l_hold (m) does not
         carry fire (PMS 437: under 4 ft direct attack by hand, under 8 ft with equipment)."""
         self.l_hold = float(l_hold); self._cache = {}; self._coarse = {}
+
+    def use_crown_rate(self, name):
+        """Protocol A25 setting C1: "cruz05" uses the Cruz et al. 2005 crown fire rate once a cell torches."""
+        self.crown_rate = str(name); self._cache = {}; self._coarse = {}
 
     def use_roads(self, l_cross):
         """Protocol A8 road rule R1: thin non-burnable lines burn as the fuel beside them when its flame >= l_cross (m)."""
@@ -201,11 +205,11 @@ class Fire:
         """The same fields on the 30 m fuel grid, a few hours kept (embers and houses look back and ahead an hour,
         and rebuilding the fields each time was half of a run's wall time)."""
         h = min(h, self.hours - 1)
-        key = (h, wind_scale, wind_turn, moist_add, crown, self.l_cross, self.ember_level, self.l_hold)
+        key = (h, wind_scale, wind_turn, moist_add, crown, self.l_cross, self.ember_level, self.l_hold, self.crown_rate)
         if key not in self._coarse:
             sp, to = self.wind(h, wind_scale, wind_turn)
             m = self.moist[h]; m = (m[0] + moist_add, m[1] + moist_add, m[2] + moist_add, m[3], m[4])
-            F = fields(self.fuel_road, m, sp, to, self.tan, self.upslope, self.cc, self.ch, self.cbh, self.cbd, crown=crown)
+            F = fields(self.fuel_road, m, sp, to, self.tan, self.upslope, self.cc, self.ch, self.cbh, self.cbd, crown=crown, crown_rate=self.crown_rate)
             if self.l_cross is not None:
                 from .landscape import road_gate
                 F = road_gate(F, self.thin, self.l_cross)
