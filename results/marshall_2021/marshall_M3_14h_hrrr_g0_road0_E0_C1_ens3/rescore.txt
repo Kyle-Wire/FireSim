@@ -1,0 +1,6 @@
+NASA FEDS 2.95 h  mapped 19.9 model [15.6, 14.1, 15.4] overlap [0.411, 0.434, 0.436]
+NASA FEDS 15.27 h (after window: model end state) mapped 25.3 model [65.3, 57.5, 61.6] overlap [0.251, 0.28, 0.265]
+hourly [(0, 0.1), (1, 6.5), (2, 10.6), (3, 15.3), (4, 19.5), (5, 23.3), (6, 25.8), (7, 27.8), (8, 31.8), (9, 38.2), (10, 45.5), (11, 51.7), (12, 56.0), (13, 59.3), (14, 61.5)]
+fit {'perimeter': 'NASA FEDS', 'hours': 2.95, 'building_ratio': 1.6917809889192614, 'area_ratio': 0.8859828500611364, 'score_a8': 2.577763838980398, 'bits_per_building': 0.705502780697511, 'bits_same_fire_rate': 0.4170177968178956, 'area_seeds': [0, 1, 2], 'building_seeds': 3, 'note': 'protocol A8 with the last in-window outline as fit outline (A19); area part from 3 saved seed(s), building part from all 3'}
+rescore rc=0
+{"run": "marshall_M3_14h_hrrr_g0_road0_E0_C1_ens3", "seeds": 3, "torching_cell_hours": 6158, "range": {"u10_kmh": [5.0, 32.0], "cbd": [0.12, 0.48], "effm": [7.0, 12.0]}, "share_outside_any": 0.995, "share_outside": {"u10_kmh": 0.309, "cbd": 0.995, "effm": 0.572}, "share_below": {"u10_kmh": 0.015, "cbd": 0.995, "effm": 0.572}}

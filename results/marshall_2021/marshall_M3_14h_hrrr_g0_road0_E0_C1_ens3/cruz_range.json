@@ -1,0 +1,30 @@
+{
+ "run": "marshall_M3_14h_hrrr_g0_road0_E0_C1_ens3",
+ "seeds": 3,
+ "torching_cell_hours": 6158,
+ "range": {
+  "u10_kmh": [
+   5.0,
+   32.0
+  ],
+  "cbd": [
+   0.12,
+   0.48
+  ],
+  "effm": [
+   7.0,
+   12.0
+  ]
+ },
+ "share_outside_any": 0.995,
+ "share_outside": {
+  "u10_kmh": 0.309,
+  "cbd": 0.995,
+  "effm": 0.572
+ },
+ "share_below": {
+  "u10_kmh": 0.015,
+  "cbd": 0.995,
+  "effm": 0.572
+ }
+}
