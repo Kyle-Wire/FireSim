@@ -1,0 +1,8 @@
+GeoMAC 3.35 h  mapped 221.7 model [272.9, 281.5, 285.2] overlap [0.272, 0.237, 0.246]
+NASA FEDS 6.95 h  mapped 165.8 model [570.7, 588.2, 596.1] overlap [0.225, 0.219, 0.209]
+GeoMAC 9.45 h  mapped 285.1 model [789.5, 823.1, 829.9] overlap [0.175, 0.199, 0.208]
+NASA FEDS 20.08 h  mapped 331.1 model [1684.8, 1739.1, 1730.3] overlap [0.174, 0.174, 0.17]
+hourly [(0, 0.0), (1, 29.7), (2, 154.0), (3, 250.5), (4, 327.0), (5, 393.4), (6, 481.5), (7, 590.6), (8, 684.8), (9, 774.2), (10, 859.8), (11, 936.8), (12, 1034.3), (13, 1153.7), (14, 1290.2), (15, 1392.3), (16, 1480.6), (17, 1554.9), (18, 1619.3), (19, 1672.2), (20, 1714.8), (21, 1751.5), (22, 1784.5), (23, 1816.0), (24, 1843.1)]
+fit {'perimeter': 'NASA FEDS', 'hours': 20.083333333333332, 'building_ratio': 2.0397421242497242, 'area_ratio': 7.023261753221647, 'score_a8': 9.06300387747137, 'bits_per_building': 2.024574869014725, 'bits_same_fire_rate': 0.9925641309974034, 'area_seeds': [0, 1, 2], 'building_seeds': 3, 'note': 'protocol A8 with the last in-window outline as fit outline (A19); area part from 3 saved seed(s), building part from all 3'}
+rescore rc=0
+{"run": "camp_M3_24h_hrrr_g0_road0_E0_C1_ens3", "seeds": 3, "torching_cell_hours": 3594531, "range": {"u10_kmh": [5.0, 32.0], "cbd": [0.12, 0.48], "effm": [7.0, 12.0]}, "share_outside_any": 1.0, "share_outside": {"u10_kmh": 0.199, "cbd": 0.478, "effm": 1.0}, "share_below": {"u10_kmh": 0.014, "cbd": 0.478, "effm": 1.0}}
