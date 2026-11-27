@@ -90,12 +90,16 @@ for seed in range(a.seeds):
         st = Structures(bx, by, barea, fire.cell, seed=seed, **params.get("houses", {}))
         sp = Spot(fire.cell, fire.lookup("fli", **kw), *ewind,
                   burnable, seed=seed, structures=st, **ekw, **params.get("embers", {}))
+    live = {}                                              # the arrival so far, kept for a partial result if the cap stops seed 0
     def watched(t0_, t1_, arr_, phi_, r_, c_, sp=sp, state={"h": -1}):
+        live.update(arr=arr_, t=t1_, embers=int(sp.n_thrown), spots=int(sp.n_spots))
         if time.time() - t_start > a.max_minutes * 60:
             raise TimeoutError(f"stopped by --max-minutes {a.max_minutes} at simulated hour {t1_ / 60:.1f} of seed {seed}")
         if int(t1_ // 60) > state["h"]:
             state["h"] = int(t1_ // 60)
-            print(f"  seed {seed} hour {state['h']:2d}: {time.time() - t1:6.0f} s, embers {sp.n_thrown}, spot fires {sp.n_spots}", flush=True)
+            km2 = float((arr_ <= t1_).sum() * fire.cell ** 2 / 1e6)
+            live.setdefault("hourly", []).append(dict(hour=state["h"], km2=round(km2, 2), embers=int(sp.n_thrown), spot_fires=int(sp.n_spots)))
+            print(f"  seed {seed} hour {state['h']:2d}: {time.time() - t1:6.0f} s, area {km2:.1f} km2, embers {sp.n_thrown}, spot fires {sp.n_spots}", flush=True)
         return sp(t0_, t1_, arr_, phi_, r_, c_)
     try:
         if phi0 is None:
@@ -105,8 +109,23 @@ for seed in range(a.seeds):
             arr[phi0 <= 0] = 0.0
     except TimeoutError as e:                              # keep the seeds that finished; say so in the result
         print(e, flush=True)
-        if seed == 0:
-            raise SystemExit("no seed finished; nothing written")
+        if seed == 0:                                      # write what seed 0 reached: arrival to the stop and the outlines inside it
+            if "arr" in live:
+                tz = live["t"]; ap = np.where(live["arr"] <= tz, live["arr"], np.inf)
+                a30p = ap[fire.k // 2::fire.k, fire.k // 2::fire.k]
+                np.savez_compressed(os.path.join(a.out, "arrival_seed0_partial.npz"), arrival_min=a30p.astype(np.float32),
+                                    left=fire.left, bottom=fire.bottom, res=fire.res, crs=str(fire.crs), stop_min=tz)
+                outl = []
+                for mins, mask, name in pers:
+                    if mins <= tz:
+                        j, _ = overlap(a30p <= mins, mask); mk = float((a30p <= mins).sum() * fire.res ** 2 / 1e6); ok = float(mask.sum() * fire.res ** 2 / 1e6)
+                        outl.append(dict(source=name, hours=mins / 60, observed_km2=ok, model_km2=mk, ratio=mk / ok if ok else None, jaccard=j))
+                    else:
+                        outl.append(dict(source=name, hours=mins / 60, reached=False))
+                json.dump(dict(stopped=str(e), stop_hours=tz / 60, seed=0, embers=live["embers"], spot_fires=live["spots"], hourly=live.get("hourly", []),
+                               outlines=outl, commit=commit, crown_rate=a.crown_rate, hold_flame=a.hold_flame, hold_from=getattr(fire, "hold_from", None), cell=fire.cell, wind_source=a.wind, gust_share=a.gust_share, wind_scale=a.wind_scale), open(os.path.join(a.out, "result_partial.json"), "w"), indent=1)
+                print("partial result for seed 0 written (result_partial.json, arrival_seed0_partial.npz)", flush=True)
+            raise SystemExit("no seed finished; seed 0 partial written")
         stopped = f"{e}; scored on the {seed} seed(s) that finished, {a.seeds} were asked for"; a.seeds = seed
         break
     l = np.isfinite(st.t_ign); lost += l; t_sum[l] += st.t_ign[l]; causes += np.bincount(st.cause[l], minlength=5)

@@ -19,7 +19,8 @@ RANGE = dict(u10_kmh=(5.0, 32.0), cbd=(0.12, 0.48), effm=(7.0, 12.0))
 
 def main():
     cfg, data, run = sys.argv[1:4]
-    res = json.load(open(os.path.join(run, "result.json")))
+    rp = os.path.join(run, "result.json")
+    res = json.load(open(rp if os.path.exists(rp) else os.path.join(run, "result_partial.json")))   # a run stopped inside seed 0
     fire = Fire(cfg, data, res["cell"])
     if res["wind_source"] == "hrrr":
         fire.use_hrrr(gust_share=res["gust_share"])
