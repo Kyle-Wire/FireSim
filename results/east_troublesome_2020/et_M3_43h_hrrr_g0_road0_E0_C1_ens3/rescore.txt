@@ -1,0 +1,7 @@
+NASA FEDS 12.32 h  mapped 577.7 model [685.2] overlap [0.411]
+NASA FEDS 23.68 h  mapped 724.1 model [1061.9] overlap [0.395]
+NASA FEDS 36.83 h  mapped 741.1 model [1257.8] overlap [0.401]
+hourly [(0, 123.0), (1, 159.2), (2, 212.2), (3, 270.4), (4, 325.1), (5, 369.4), (6, 412.7), (7, 452.6), (8, 493.8), (9, 534.8), (10, 575.7), (11, 625.2), (12, 670.6), (13, 710.5), (14, 740.5), (15, 767.5), (16, 797.9), (17, 825.2), (18, 846.6), (19, 872.1), (20, 902.0), (21, 931.2), (22, 966.3), (23, 1022.0), (24, 1079.2), (25, 1127.9), (26, 1166.6), (27, 1193.7), (28, 1208.3), (29, 1218.7), (30, 1227.0), (31, 1233.8), (32, 1239.1), (33, 1243.8), (34, 1248.1), (35, 1251.6), (36, 1255.0), (37, 1258.4), (38, 1261.0), (39, 1263.4), (40, 1265.6), (41, 1267.5), (42, 1271.7), (43, 1277.3)]
+fit {'perimeter': 'NASA FEDS', 'hours': 36.833333333333336, 'building_ratio': 10.124783317785809, 'area_ratio': 2.548992136357707, 'score_a8': 12.673775454143517, 'bits_per_building': 5.043780207957189, 'bits_same_fire_rate': 0.4981617926674024, 'area_seeds': [0], 'building_seeds': 1, 'note': 'protocol A8 with the last in-window outline as fit outline (A19); area part from 1 saved seed(s), building part from all 1'}
+rescore rc=0
+{"run": "et_M3_43h_hrrr_g0_road0_E0_C1_ens3", "seeds": 1, "torching_cell_hours": 519263, "range": {"u10_kmh": [5.0, 32.0], "cbd": [0.12, 0.48], "effm": [7.0, 12.0]}, "share_outside_any": 0.997, "share_outside": {"u10_kmh": 0.351, "cbd": 0.759, "effm": 0.972}, "share_below": {"u10_kmh": 0.024, "cbd": 0.759, "effm": 0.958}}

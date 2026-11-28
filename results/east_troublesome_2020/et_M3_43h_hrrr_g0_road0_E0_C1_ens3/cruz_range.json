@@ -1,0 +1,30 @@
+{
+ "run": "et_M3_43h_hrrr_g0_road0_E0_C1_ens3",
+ "seeds": 1,
+ "torching_cell_hours": 519263,
+ "range": {
+  "u10_kmh": [
+   5.0,
+   32.0
+  ],
+  "cbd": [
+   0.12,
+   0.48
+  ],
+  "effm": [
+   7.0,
+   12.0
+  ]
+ },
+ "share_outside_any": 0.997,
+ "share_outside": {
+  "u10_kmh": 0.351,
+  "cbd": 0.759,
+  "effm": 0.972
+ },
+ "share_below": {
+  "u10_kmh": 0.024,
+  "cbd": 0.759,
+  "effm": 0.958
+ }
+}
