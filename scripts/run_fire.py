@@ -25,7 +25,7 @@ ap.add_argument("--wind-scale", type=float, default=1.0); ap.add_argument("--cel
 ap.add_argument("--ember-wind", default="surface", choices=["surface", "80", "850", "blend"], help="protocol A10: wind that carries embers (HRRR only for 80 m and 850 hPa)")
 ap.add_argument("--loft-mw", type=float, default=20.0, help="protocol A11, with --ember-wind blend: fireline intensity (MW/m) at which embers ride the 850 hPa wind fully")
 ap.add_argument("--windsim", nargs="+", help="protocol A15, wind option W3: WindSim terrain_wind.npz files (one per inflow bearing); needs --wind hrrr")
-ap.add_argument("--crown-rate", default="r91", choices=("r91", "cruz05"), help="protocol A25: crown fire rate once a cell torches; r91 = Rothermel 1991 with Scott and Reinhardt (default), cruz05 = Cruz, Alexander and Wakimoto 2005 (setting C1)")
+ap.add_argument("--crown-rate", default="r91", choices=("r91", "cruz05", "cruz05c"), help="protocol A25: crown fire rate once a cell torches; r91 = Rothermel 1991 with Scott and Reinhardt (default), cruz05 = Cruz, Alexander and Wakimoto 2005 (setting C1); cruz05c = A26 setting C2, conifer timber only, inputs held to the fitted range")
 ap.add_argument("--hold-flame", type=float, help="protocol A22 held-edge rule H2: flame length (m) under which a cell does not carry fire in that hour; omitted = rule off")
 ap.add_argument("--hold-after-event", action="store_true", help="protocol A24 rule H3: --hold-flame only from the end of the wind event (A17's cut on the HRRR box wind)")
 ap.add_argument("--road-cross", type=float, help="protocol A8 road rule R1: flame length (m) at which thin road lines burn; omitted = rule off")

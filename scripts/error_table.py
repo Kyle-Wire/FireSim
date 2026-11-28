@@ -172,6 +172,7 @@ def main():
     for h in range(int(np.clip(np.ceil(t_end / 60.0), 1, fire.hours))):
         fmax = np.maximum(fmax, fire.coarse(h, wind_scale=res.get("wind_scale", 1.0), crown=False)["fli"][R, C])
     out.update(t12_fli_max=fmax, t12_cbh=np.asarray(fire.cbh)[R, C], t12_cbd=np.asarray(fire.cbd)[R, C])
+    out["t12_fbfm"] = np.asarray(fire.fuel)[R, C].astype(np.int16)      # A26: Scott and Burgan fuel model at each point
     out.update(t12_row=R, t12_col=C, t12_t_obs=obs[R, C], t12_t_mod=a30[R, C], t12_bld100=near[R, C])
     # ---- T3: 300 m blocks with at least 5 scored buildings
     from scipy.spatial import cKDTree

@@ -41,3 +41,20 @@ def test_default_unchanged_and_no_torch_unchanged():
     assert a["rate"][0, 0] == b["rate"][0, 0]
     lo = cell("cruz05", 1.0, fuel=183)                    # timber litter in light wind: no torching, surface only
     assert lo["kind"][0, 0] == 1 and lo["rate"][0, 0] == cell("r91", 1.0, fuel=183)["rate"][0, 0]
+
+
+# ---- protocol A26 setting C2: conifer timber only, inputs held at the edges of the fitted range
+def test_c2_clamps_wind_moisture_and_cbd():
+    F = cell("cruz05c", 15.0, cbd=0.30)                     # 54 km/h is held at 32; EFFM 4 % is held at 7
+    want = 11.02 * 32.0 ** 0.90 * 0.30 ** 0.19 * math.exp(-0.17 * 7.0)
+    assert F["kind"][0, 0] == 3 and F["rate"][0, 0] == pytest.approx(want, rel=1e-6)
+
+
+def test_c2_is_r91_in_broadleaf_litter():
+    for fuel in (182, 186, 189):
+        a = cell("cruz05c", 10.0, fuel=fuel); b = cell("r91", 10.0, fuel=fuel)
+        assert a["rate"][0, 0] == pytest.approx(b["rate"][0, 0]) and a["kind"][0, 0] == b["kind"][0, 0]
+
+
+def test_c2_never_faster_than_c1_in_dry_fuel():
+    assert cell("cruz05c", 10.0)["rate"][0, 0] <= cell("cruz05", 10.0)["rate"][0, 0]

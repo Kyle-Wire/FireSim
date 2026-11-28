@@ -29,13 +29,22 @@ def _coeffs(fuel, moist):
     return s
 
 
+# Protocol A26 (setting C2): fuel models of Scott and Burgan 2005 (RMRS-GTR-153) where the Cruz et al. 2005 conifer
+# crown rate is used. Named conifer: TL1 Low Load Compact Conifer Litter, TL3 Moderate Load Conifer Litter, TL5 High
+# Load Conifer Litter, TL8 Long-Needle Litter, TU4 Dwarf Conifer With Understory; timber types without a broadleaf
+# name: TU1, TU2, TU3, TU5, TL4 Small downed logs, TL7 Large Downed Logs. Left out: TL2, TL6, TL9 (Broadleaf Litter).
+CONIFER_TIMBER = (161, 162, 163, 164, 165, 181, 183, 184, 185, 187, 188)
+
+
 def fields(fuel_number, moist, wind_20ft, wind_to, slope_tan, upslope, canopy_cover=None, canopy_height=None,
            cbh=None, cbd=None, crown_ratio=0.4, fmc=100.0, z_max=8.0, crown=True, crown_rate="r91"):
     """All inputs (ny, nx) arrays or scalars; wind_20ft in m/s. moist: (1h, 10h, 100h, herb, woody) fractions.
     Returns dict of (ny, nx) arrays: rate (head, m/min), heading (rad), lb, flame (m), fli (kW/m), kind (0 none,
     1 surface, 2 passive crown, 3 active crown), plus r0 and midflame wind.
     crown_rate "r91": Rothermel 1991 with Scott and Reinhardt's crown fraction (RP-29); "cruz05": protocol A25 setting
-    C1, the Cruz, Alexander and Wakimoto 2005 rate (Can. J. For. Res. 35: 1626-1639, eqs. 1-4) once a cell torches."""
+    C1, the Cruz, Alexander and Wakimoto 2005 rate (Can. J. For. Res. 35: 1626-1639, eqs. 1-4) once a cell torches;
+    "cruz05c": protocol A26 setting C2, the same rate in conifer timber cells only (CONIFER_TIMBER), its wind, moisture
+    and CBD held at the edges of the range it was fitted on (U10 5-32 km/h, EFFM 7-12 %, CBD 0.12-0.48)."""
     fn = np.asarray(fuel_number)
     shp = fn.shape
     bc = lambda v: np.broadcast_to(np.asarray(v, float), shp)
@@ -102,14 +111,19 @@ def fields(fuel_number, moist, wind_20ft, wind_to, slope_tan, upslope, canopy_co
         active = torch & (r_act >= r_crit)
         cfb = np.where(active, 1.0, np.where(torch, cfb, 0.0))
         r_final = np.where(torch, rate + cfb * (r_act - rate), rate)
-        if crown_rate == "cruz05":                        # A25 C1: initiation as before, rate from Cruz et al. 2005
+        if crown_rate in ("cruz05", "cruz05c"):           # A25 C1: initiation as before, rate from Cruz et al. 2005
             u10_kmh = np.maximum(U20 * 1.15 * 3.6, 1.0)  # 20 ft to 10 m open wind (GTR-266 p. 16), km/h
+            effm = np.full(shp, moist[0] * 100.0); cbd_r = np.maximum(cbd_a, 1e-3)
+            if crown_rate == "cruz05c":                   # A26 C2: inputs held at the edges of the fitted range (CAC keeps the real CBD)
+                u10_kmh = np.clip(u10_kmh, 5.0, 32.0); effm = np.clip(effm, 7.0, 12.0); cbd_r = np.clip(cbd_a, 0.12, 0.48)
             with np.errstate(divide="ignore", invalid="ignore"):
-                cros_a = 11.02 * u10_kmh ** 0.90 * np.maximum(cbd_a, 1e-3) ** 0.19 * np.exp(-0.17 * moist[0] * 100.0)   # eq. 3
+                cros_a = 11.02 * u10_kmh ** 0.90 * cbd_r ** 0.19 * np.exp(-0.17 * effm)                          # eq. 3
                 cac = cros_a * cbd_a / 3.0                                                                          # eqs. 1-2
-            act_c = torch & (cac >= 1.0)
-            r_final = np.where(act_c, cros_a, np.where(torch, np.maximum(rate, cros_a * np.exp(-cac)), rate))     # eq. 4
-            cfb = np.where(act_c, 1.0, cfb); active = act_c
+            where = torch if crown_rate == "cruz05" else torch & np.isin(fn, CONIFER_TIMBER)   # A26: conifer timber models only
+            act_c = where & (cac >= 1.0)
+            r_c = np.where(act_c, cros_a, np.where(where, np.maximum(rate, cros_a * np.exp(-cac)), rate))         # eq. 4
+            r_final = np.where(where, r_c, r_final)
+            cfb = np.where(act_c, 1.0, np.where(where, cfb, cfb)); active = np.where(where, act_c, active)
         elif crown_rate != "r91":
             raise ValueError(crown_rate)
         r_final = np.maximum(r_final, rate)
